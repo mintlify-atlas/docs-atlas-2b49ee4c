@@ -1,0 +1,535 @@
+---
+title: "Prescriptions API"
+description: "Create and manage exercise prescriptions assigned to patients. Prescriptions group exercises with custom per-patient dosage parameters."
+---
+
+A prescription ties a set of exercises to a patient. Each exercise in a prescription can override the default dosage (duration, repetitions, sets) and include custom instructions specific to that patient.
+
+## Schema
+
+### Prescription
+
+<ResponseField name="id" type="integer">
+  Unique identifier for the prescription.
+</ResponseField>
+
+<ResponseField name="patient_name" type="string" required>
+  Full name of the patient. Maximum 100 characters.
+</ResponseField>
+
+<ResponseField name="patient_email" type="string">
+  Optional email address of the patient. Must be a valid email format.
+</ResponseField>
+
+<ResponseField name="provider_name" type="string" required>
+  Name of the prescribing clinician. Maximum 100 characters.
+</ResponseField>
+
+<ResponseField name="notes" type="string">
+  Optional free-text clinical notes.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Prescription status. One of `active`, `completed`, or `cancelled`. Defaults to `active`.
+</ResponseField>
+
+<ResponseField name="created_at" type="string (datetime)">
+  ISO 8601 timestamp of when the record was created.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string (datetime)">
+  ISO 8601 timestamp of the most recent update.
+</ResponseField>
+
+<ResponseField name="prescription_exercises" type="array">
+  The exercises included in this prescription.
+
+  <Expandable title="PrescriptionExercise properties">
+    <ResponseField name="id" type="integer">Unique identifier of the prescription-exercise link.</ResponseField>
+    <ResponseField name="prescription_id" type="integer">ID of the parent prescription.</ResponseField>
+    <ResponseField name="exercise_id" type="integer">ID of the referenced exercise.</ResponseField>
+    <ResponseField name="custom_instructions" type="string">Patient-specific instructions (overrides exercise default).</ResponseField>
+    <ResponseField name="custom_duration" type="integer">Patient-specific duration in minutes (must be > 0).</ResponseField>
+    <ResponseField name="custom_repetitions" type="integer">Patient-specific repetitions (must be > 0).</ResponseField>
+    <ResponseField name="custom_sets" type="integer">Patient-specific sets (must be > 0).</ResponseField>
+    <ResponseField name="created_at" type="string (datetime)">Created timestamp.</ResponseField>
+    <ResponseField name="exercise" type="object">Full exercise object. See [Exercises](/api/exercises).</ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## List prescriptions
+
+<Note>**GET** `/api/v1/prescriptions/`</Note>
+
+Returns a paginated list of all prescriptions. Optionally filter by status.
+
+**Query parameters**
+
+<ParamField query="skip" type="integer">
+  Number of records to skip. Defaults to `0`.
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Maximum number of records to return. Defaults to `100`.
+</ParamField>
+
+<ParamField query="status_filter" type="string">
+  Filter prescriptions by status. One of `active`, `completed`, or `cancelled`. When provided, `skip` and `limit` are ignored.
+</ParamField>
+
+<CodeGroup>
+```bash All prescriptions
+curl http://localhost:8000/api/v1/prescriptions/?skip=0&limit=10
+```
+
+```bash Filter by status
+curl "http://localhost:8000/api/v1/prescriptions/?status_filter=active"
+```
+</CodeGroup>
+
+```json Response 200
+[
+  {
+    "id": 1,
+    "patient_name": "Jane Smith",
+    "patient_email": "jane@example.com",
+    "provider_name": "Dr. A. Patel",
+    "notes": "Post-op ACL rehab — week 4",
+    "status": "active",
+    "created_at": "2026-02-05T09:00:00Z",
+    "updated_at": "2026-02-05T09:00:00Z",
+    "prescription_exercises": []
+  }
+]
+```
+
+---
+
+## Create prescription
+
+<Note>**POST** `/api/v1/prescriptions/`</Note>
+
+Creates a new prescription with an optional set of exercises. All referenced `exercise_id` values must exist or a `400` is returned.
+
+**Request body**
+
+<ParamField body="patient_name" type="string" required>
+  Full name of the patient. Between 1 and 100 characters.
+</ParamField>
+
+<ParamField body="provider_name" type="string" required>
+  Name of the prescribing clinician. Between 1 and 100 characters.
+</ParamField>
+
+<ParamField body="patient_email" type="string">
+  Optional email address (must match `x@x.x` pattern).
+</ParamField>
+
+<ParamField body="notes" type="string">
+  Optional clinical notes.
+</ParamField>
+
+<ParamField body="status" type="string">
+  Initial status. One of `active`, `completed`, `cancelled`. Defaults to `active`.
+</ParamField>
+
+<ParamField body="exercises" type="array">
+  List of exercises to include in the prescription. Can be empty (`[]`).
+
+  Each item in the array accepts:
+
+  <Expandable title="Exercise item properties">
+    <ParamField body="exercise_id" type="integer" required>ID of an existing exercise.</ParamField>
+    <ParamField body="custom_instructions" type="string">Patient-specific instructions.</ParamField>
+    <ParamField body="custom_duration" type="integer">Duration override in minutes (must be > 0).</ParamField>
+    <ParamField body="custom_repetitions" type="integer">Repetition override (must be > 0).</ParamField>
+    <ParamField body="custom_sets" type="integer">Sets override (must be > 0).</ParamField>
+  </Expandable>
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X POST http://localhost:8000/api/v1/prescriptions/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "patient_name": "Jane Smith",
+    "patient_email": "jane@example.com",
+    "provider_name": "Dr. A. Patel",
+    "notes": "Post-op ACL rehab — week 4",
+    "status": "active",
+    "exercises": [
+      {
+        "exercise_id": 1,
+        "custom_instructions": "Perform slowly, avoid full extension",
+        "custom_repetitions": 8,
+        "custom_sets": 3
+      },
+      {
+        "exercise_id": 2,
+        "custom_duration": 5
+      }
+    ]
+  }'
+```
+</CodeGroup>
+
+```json Response 201
+{
+  "id": 1,
+  "patient_name": "Jane Smith",
+  "patient_email": "jane@example.com",
+  "provider_name": "Dr. A. Patel",
+  "notes": "Post-op ACL rehab — week 4",
+  "status": "active",
+  "created_at": "2026-02-05T09:00:00Z",
+  "updated_at": "2026-02-05T09:00:00Z",
+  "prescription_exercises": [
+    {
+      "id": 1,
+      "prescription_id": 1,
+      "exercise_id": 1,
+      "custom_instructions": "Perform slowly, avoid full extension",
+      "custom_duration": null,
+      "custom_repetitions": 8,
+      "custom_sets": 3,
+      "created_at": "2026-02-05T09:00:00Z",
+      "exercise": {
+        "id": 1,
+        "name": "Quad Set",
+        "instructions": "Lie flat. Tighten the quad by pressing the back of the knee down. Hold 5 seconds.",
+        "repetitions": 10,
+        "sets": 3,
+        "difficulty_level": "beginner",
+        "is_predefined": true
+      }
+    },
+    {
+      "id": 2,
+      "prescription_id": 1,
+      "exercise_id": 2,
+      "custom_instructions": null,
+      "custom_duration": 5,
+      "custom_repetitions": null,
+      "custom_sets": null,
+      "created_at": "2026-02-05T09:00:00Z",
+      "exercise": {
+        "id": 2,
+        "name": "Heel Slide",
+        "instructions": "Lie on your back. Slowly slide your heel toward your buttocks.",
+        "duration_minutes": 10,
+        "difficulty_level": "beginner",
+        "is_predefined": true
+      }
+    }
+  ]
+}
+```
+
+<Warning>
+Returns `400 Bad Request` with `"Exercise with ID {id} not found"` if any `exercise_id` in the exercises array does not exist.
+</Warning>
+
+---
+
+## Get prescription by ID
+
+<Note>**GET** `/api/v1/prescriptions/{prescription_id}`</Note>
+
+Returns a single prescription with all of its exercises and their full exercise objects.
+
+**Path parameters**
+
+<ParamField path="prescription_id" type="integer" required>
+  The unique identifier of the prescription.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/prescriptions/1
+```
+</CodeGroup>
+
+---
+
+## Get prescriptions by patient
+
+<Note>**GET** `/api/v1/prescriptions/patient/{patient_name}`</Note>
+
+Returns all prescriptions for a specific patient. The match is performed against `patient_name`.
+
+**Path parameters**
+
+<ParamField path="patient_name" type="string" required>
+  The exact patient name to look up.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/prescriptions/patient/Jane%20Smith
+```
+</CodeGroup>
+
+```json Response 200
+[
+  {
+    "id": 1,
+    "patient_name": "Jane Smith",
+    "provider_name": "Dr. A. Patel",
+    "status": "active",
+    "created_at": "2026-02-05T09:00:00Z",
+    "updated_at": "2026-02-05T09:00:00Z",
+    "prescription_exercises": []
+  }
+]
+```
+
+---
+
+## Get prescriptions by provider
+
+<Note>**GET** `/api/v1/prescriptions/provider/{provider_name}`</Note>
+
+Returns all prescriptions created by a specific provider.
+
+**Path parameters**
+
+<ParamField path="provider_name" type="string" required>
+  The exact provider name to look up.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/prescriptions/provider/Dr.%20A.%20Patel
+```
+</CodeGroup>
+
+---
+
+## Update prescription
+
+<Note>**PUT** `/api/v1/prescriptions/{prescription_id}`</Note>
+
+Partially updates prescription metadata. Only fields included in the request body are changed. To add or remove exercises use the dedicated exercise sub-resource endpoints below.
+
+**Path parameters**
+
+<ParamField path="prescription_id" type="integer" required>
+  The unique identifier of the prescription to update.
+</ParamField>
+
+**Request body** — all fields are optional
+
+<ParamField body="patient_name" type="string">New patient name.</ParamField>
+<ParamField body="patient_email" type="string">New patient email.</ParamField>
+<ParamField body="provider_name" type="string">New provider name.</ParamField>
+<ParamField body="notes" type="string">New notes.</ParamField>
+<ParamField body="status" type="string">New status: `active`, `completed`, or `cancelled`.</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X PUT http://localhost:8000/api/v1/prescriptions/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notes": "Post-op ACL rehab — week 6, progressing well",
+    "status": "active"
+  }'
+```
+</CodeGroup>
+
+---
+
+## Update prescription status
+
+<Note>**PATCH** `/api/v1/prescriptions/{prescription_id}/status`</Note>
+
+Changes only the status of a prescription. Returns `400` if the status value is not one of the allowed values.
+
+**Path parameters**
+
+<ParamField path="prescription_id" type="integer" required>
+  The unique identifier of the prescription.
+</ParamField>
+
+**Query parameters**
+
+<ParamField query="status" type="string" required>
+  New status. Must be one of `active`, `completed`, or `cancelled`.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X PATCH "http://localhost:8000/api/v1/prescriptions/1/status?status=completed"
+```
+</CodeGroup>
+
+```json Response 200
+{
+  "id": 1,
+  "patient_name": "Jane Smith",
+  "status": "completed",
+  "updated_at": "2026-03-01T14:00:00Z",
+  "prescription_exercises": []
+}
+```
+
+---
+
+## Delete prescription
+
+<Note>**DELETE** `/api/v1/prescriptions/{prescription_id}`</Note>
+
+Permanently deletes a prescription and all its prescription-exercise links. Returns `404` if the prescription does not exist.
+
+**Path parameters**
+
+<ParamField path="prescription_id" type="integer" required>
+  The unique identifier of the prescription to delete.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X DELETE http://localhost:8000/api/v1/prescriptions/1
+```
+</CodeGroup>
+
+```json Response 200
+{
+  "message": "Prescription deleted successfully"
+}
+```
+
+---
+
+## Add exercise to prescription
+
+<Note>**POST** `/api/v1/prescriptions/{prescription_id}/exercises`</Note>
+
+Adds a single exercise to an existing prescription. Returns `404` if the prescription or exercise does not exist.
+
+**Path parameters**
+
+<ParamField path="prescription_id" type="integer" required>
+  The ID of the prescription.
+</ParamField>
+
+**Request body**
+
+<ParamField body="exercise_id" type="integer" required>
+  ID of the exercise to add.
+</ParamField>
+
+<ParamField body="custom_instructions" type="string">
+  Patient-specific instructions.
+</ParamField>
+
+<ParamField body="custom_duration" type="integer">
+  Duration override in minutes (must be > 0).
+</ParamField>
+
+<ParamField body="custom_repetitions" type="integer">
+  Repetition override (must be > 0).
+</ParamField>
+
+<ParamField body="custom_sets" type="integer">
+  Sets override (must be > 0).
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X POST http://localhost:8000/api/v1/prescriptions/1/exercises \
+  -H "Content-Type: application/json" \
+  -d '{
+    "exercise_id": 3,
+    "custom_instructions": "Pain-free range only",
+    "custom_repetitions": 10,
+    "custom_sets": 2
+  }'
+```
+</CodeGroup>
+
+```json Response 200
+{
+  "id": 3,
+  "prescription_id": 1,
+  "exercise_id": 3,
+  "custom_instructions": "Pain-free range only",
+  "custom_duration": null,
+  "custom_repetitions": 10,
+  "custom_sets": 2,
+  "created_at": "2026-02-10T11:00:00Z",
+  "exercise": {
+    "id": 3,
+    "name": "Straight Leg Raise",
+    "instructions": "Lie on your back. Lift the straight leg to 45 degrees.",
+    "repetitions": 10,
+    "sets": 3,
+    "difficulty_level": "beginner"
+  }
+}
+```
+
+---
+
+## Remove exercise from prescription
+
+<Note>**DELETE** `/api/v1/prescriptions/{prescription_id}/exercises/{exercise_id}`</Note>
+
+Removes an exercise from a prescription. Returns `404` if the link does not exist.
+
+**Path parameters**
+
+<ParamField path="prescription_id" type="integer" required>
+  The ID of the prescription.
+</ParamField>
+
+<ParamField path="exercise_id" type="integer" required>
+  The ID of the exercise to remove.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X DELETE http://localhost:8000/api/v1/prescriptions/1/exercises/3
+```
+</CodeGroup>
+
+```json Response 200
+{
+  "message": "Exercise removed from prescription successfully"
+}
+```
+
+---
+
+## Search prescriptions
+
+<Note>**GET** `/api/v1/prescriptions/search/{search_term}`</Note>
+
+Returns prescriptions whose `patient_name`, `provider_name`, or `notes` contain the search term (case-insensitive).
+
+**Path parameters**
+
+<ParamField path="search_term" type="string" required>
+  The term to search for.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/prescriptions/search/jane
+```
+</CodeGroup>
+
+```json Response 200
+[
+  {
+    "id": 1,
+    "patient_name": "Jane Smith",
+    "provider_name": "Dr. A. Patel",
+    "status": "active",
+    "created_at": "2026-02-05T09:00:00Z",
+    "updated_at": "2026-02-05T09:00:00Z",
+    "prescription_exercises": []
+  }
+]
+```

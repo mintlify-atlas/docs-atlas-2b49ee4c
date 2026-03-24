@@ -1,0 +1,166 @@
+---
+title: "Installation"
+description: "Complete installation guide for the Digi Rehab backend (FastAPI) and frontend (React + Vite)."
+---
+
+## System Requirements
+
+| Component | Minimum Version |
+|-----------|----------------|
+| Python    | 3.8+           |
+| Node.js   | 18+            |
+| npm       | bundled with Node.js |
+
+<Note>
+  The default database is SQLite. No additional database software is required to get started.
+</Note>
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/AbdulRehman-z/Digi_Rehab.git
+    cd Digi_Rehab
+    ```
+  </Step>
+
+  <Step title="Create and activate a Python virtual environment">
+    <Tip>
+      Using a virtual environment keeps project dependencies isolated from your system Python installation and avoids version conflicts between projects.
+    </Tip>
+
+    <CodeGroup>
+      ```bash macOS / Linux
+      python3 -m venv .venv
+      source .venv/bin/activate
+      ```
+
+      ```bash Windows (Command Prompt)
+      python -m venv .venv
+      .venv\Scripts\activate.bat
+      ```
+
+      ```bash Windows (PowerShell)
+      python -m venv .venv
+      .venv\Scripts\Activate.ps1
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Install Python dependencies">
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+    Key packages installed:
+
+    | Package | Version | Purpose |
+    |---------|---------|--------|
+    | `fastapi` | >=0.100.0 | Web framework |
+    | `uvicorn[standard]` | >=0.23.0 | ASGI server |
+    | `sqlalchemy` | >=2.0.0 | ORM / database layer |
+    | `alembic` | >=1.12.0 | Database migrations |
+    | `psycopg[binary]` | >=3.1.0 | PostgreSQL driver |
+    | `pydantic` | >=2.0.0 | Data validation |
+    | `pydantic-settings` | >=2.0.0 | Settings management |
+    | `python-dotenv` | >=1.0.0 | `.env` file loading |
+  </Step>
+
+  <Step title="Create your .env file">
+    Copy the example environment file and edit it for your environment:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    At minimum, confirm the following defaults are correct for your setup:
+
+    ```bash .env
+    DATABASE_URL=sqlite:///./digi_rehab.db
+    DEBUG=True
+    HOST=0.0.0.0
+    PORT=8000
+    ```
+
+    See [Environment Variables](/deployment/environment-variables) for a full reference.
+  </Step>
+
+  <Step title="Initialize the database">
+    Run the initialization script to create all database tables and seed default exercise categories:
+
+    ```bash
+    python init_database.py
+    ```
+
+    This script creates the following default data:
+    - **Body Areas** (13): Face/TMJ, Cervical, Thoracic, Lumbar, Abdominal, Sacroiliac, Hip, Knee, Ankle/Foot, Shoulder, Elbow/Wrist, Hand, All Body
+    - **Exercise Types** (13): Stretch, PROM, AAROM, Mobilization, AROM, Static, Isometrics, Stabilization, Resisted, Gym, Plyometrics, Cardio, Dynamic
+    - **Positions** (6): Standing, Sitting, Kneeling, Sidelying, Supine, Prone
+    - **Movements** (13): Flexion, Extension, Rotation, Abduction, Adduction, Side Bend, Diagonal, and more
+    - **Equipment Types** (14): Elastic, Weight, Pulley, Ball, BOSU, TRX, Foam Roll, No Device, and more
+    - **Predefined Exercises** (19): A library of rehabilitation exercises spanning all body areas
+
+    See [Database Setup](/deployment/database-setup) for more details.
+  </Step>
+
+  <Step title="Start the backend server">
+    <CodeGroup>
+      ```bash Using python main.py
+      python main.py
+      ```
+
+      ```bash Using uvicorn directly
+      uvicorn main:app --reload --host 0.0.0.0 --port 8000
+      ```
+    </CodeGroup>
+
+    The API will be available at `http://localhost:8000`.
+  </Step>
+
+  <Step title="Install frontend dependencies">
+    The frontend is a React + TypeScript application built with Vite.
+
+    ```bash
+    cd frontend
+    npm install
+    ```
+  </Step>
+
+  <Step title="Start the frontend dev server">
+    ```bash
+    npm run dev
+    ```
+
+    The frontend dev server will start on the port configured by Vite (default `http://localhost:5173`).
+  </Step>
+</Steps>
+
+## Verification
+
+Once the backend is running, confirm it is healthy by calling the `/health` endpoint:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "healthy",
+  "database": "connected",
+  "timestamp": "2026-02-16T00:00:00Z"
+}
+```
+
+You can also browse the auto-generated API documentation:
+
+<CardGroup cols={2}>
+  <Card title="Swagger UI" icon="magnifying-glass" href="http://localhost:8000/docs">
+    Interactive API explorer powered by Swagger UI.
+  </Card>
+  <Card title="ReDoc" icon="book-open" href="http://localhost:8000/redoc">
+    Clean, readable API reference powered by ReDoc.
+  </Card>
+</CardGroup>

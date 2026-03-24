@@ -1,0 +1,223 @@
+---
+title: "Exercise Categories"
+description: "The five-dimension taxonomy used to classify exercises in Digi Rehab, including all default values and custom category support."
+---
+
+Every exercise in Digi Rehab can be tagged across five independent category dimensions. These tags drive filtering in the UI and allow providers to narrow down exercises by body region, movement pattern, required equipment, and more.
+
+Each dimension is stored in its own database table and linked to exercises through a dedicated M:N association table. An exercise may have **zero or more** values from each dimension.
+
+## The Five Dimensions
+
+<Tabs>
+
+<Tab title="Body Area">
+
+Table: `body_areas` | Association: `exercise_body_areas`
+
+Identifies the anatomical region targeted by the exercise.
+
+| # | Default Value |
+|---|---|
+| 1 | Face/TMJ |
+| 2 | Cervical |
+| 3 | Thoracic |
+| 4 | Lumbar |
+| 5 | Abdominal |
+| 6 | Sacroiliac |
+| 7 | Hip |
+| 8 | Knee |
+| 9 | Ankle/Foot |
+| 10 | Shoulder |
+| 11 | Elbow/Wrist |
+| 12 | Hand |
+| 13 | All Body |
+
+</Tab>
+
+<Tab title="Exercise Type">
+
+Table: `exercise_types` | Association: `exercise_types_link`
+
+Describes the clinical modality or method of the exercise.
+
+| # | Default Value | Notes |
+|---|---|---|
+| 1 | Stretch | |
+| 2 | PROM | Passive Range of Motion |
+| 3 | AAROM | Active Assisted Range of Motion |
+| 4 | Mobilization | |
+| 5 | AROM | Active Range of Motion |
+| 6 | Static | |
+| 7 | Isometrics | |
+| 8 | Stabilization | |
+| 9 | Resisted | |
+| 10 | Gym | |
+| 11 | Plyometrics | |
+| 12 | Cardio | |
+| 13 | Dynamic | |
+
+</Tab>
+
+<Tab title="Position">
+
+Table: `positions` | Association: `exercise_positions`
+
+The starting body position required to perform the exercise.
+
+| # | Default Value |
+|---|---|
+| 1 | Standing |
+| 2 | Sitting |
+| 3 | Kneeling |
+| 4 | Sidelying |
+| 5 | Supine |
+| 6 | Prone |
+
+</Tab>
+
+<Tab title="Movement">
+
+Table: `movements` | Association: `exercise_movements`
+
+The primary movement plane or type performed during the exercise.
+
+| # | Default Value | Notes |
+|---|---|---|
+| 1 | Flexion | |
+| 2 | Extension | |
+| 3 | Rotation | |
+| 4 | Abduction | |
+| 5 | Adduction | |
+| 6 | Side Bend | |
+| 7 | Diagonal | |
+| 8 | Horz. Abd. | Horizontal Abduction |
+| 9 | Horz. Add. | Horizontal Adduction |
+| 10 | Supination | |
+| 11 | Pronation | |
+| 12 | Ulnar Dev. | Ulnar Deviation |
+| 13 | Radial Dev. | Radial Deviation |
+
+</Tab>
+
+<Tab title="Equipment Type">
+
+Table: `equipment_types` | Association: `exercise_equipment`
+
+Also referred to as **Exercise With** in the UI. Lists the device or props needed.
+
+| # | Default Value |
+|---|---|
+| 1 | Elastic |
+| 2 | Weight |
+| 3 | Pulley |
+| 4 | Ball |
+| 5 | BOSU |
+| 6 | Total Gym |
+| 7 | TRX |
+| 8 | Foam Roll |
+| 9 | Balance Board |
+| 10 | Cane |
+| 11 | Closed Chain |
+| 12 | No Device |
+| 13 | Putty |
+| 14 | Other |
+
+</Tab>
+
+</Tabs>
+
+## The `is_custom` Flag
+
+Every category row carries an `is_custom: bool` field.
+
+- **Default categories** are seeded during `init_database.py` with `is_custom=False`. These entries represent the clinical standard taxonomy and **cannot be deleted** through the API.
+- **Custom categories** are any entries created by API consumers (`POST /api/v1/categories/{category-type}`). These are created with `is_custom=True` and **can be updated or deleted** at any time.
+
+<Warning>
+Attempting to `DELETE` a category row where `is_custom=False` will be rejected by the API. Update your client to check the `is_custom` field before rendering a delete control.
+</Warning>
+
+## Retrieving Categories via API
+
+All five category types share the same endpoint pattern under `/api/v1/categories/`.
+
+```bash
+# Body areas
+GET /api/v1/categories/body-areas
+
+# Exercise types
+GET /api/v1/categories/exercise-types
+
+# Positions
+GET /api/v1/categories/positions
+
+# Movements
+GET /api/v1/categories/movements
+
+# Equipment types
+GET /api/v1/categories/equipment-types
+```
+
+Each endpoint returns a list of category objects:
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Stretch",
+    "is_custom": false,
+    "created_at": "2024-01-15T09:00:00Z"
+  },
+  {
+    "id": 14,
+    "name": "Proprioception",
+    "is_custom": true,
+    "created_at": "2024-03-10T14:22:00Z"
+  }
+]
+```
+
+## Creating a Custom Category
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/categories/body-areas" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Temporomandibular Joint"}'
+```
+
+The response includes the newly assigned `id` and confirms `is_custom: true`:
+
+```json
+{
+  "id": 14,
+  "name": "Temporomandibular Joint",
+  "is_custom": true,
+  "created_at": "2024-06-01T10:30:00Z"
+}
+```
+
+## Assigning Categories to an Exercise
+
+Category IDs are passed as arrays of integers when creating or updating an exercise. Each array maps to one of the five dimensions:
+
+```json
+{
+  "name": "Shoulder Flexion with Resistance Band",
+  "instructions": "Stand with band under feet, pull upward to shoulder height...",
+  "repetitions": 10,
+  "sets": 3,
+  "difficulty_level": "intermediate",
+  "body_area_ids": [10],
+  "exercise_type_ids": [9],
+  "position_ids": [1],
+  "movement_ids": [1],
+  "equipment_type_ids": [1]
+}
+```
+
+The same arrays are accepted on `PUT /api/v1/exercises/{exercise_id}` to replace the existing category assignments.
+
+<Tip>
+Fetch all category lists once on page load and cache them client-side. Category lists change infrequently and do not need to be re-fetched on every exercise form render.
+</Tip>

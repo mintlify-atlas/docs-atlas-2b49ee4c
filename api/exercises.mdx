@@ -1,0 +1,495 @@
+---
+title: "Exercises API"
+description: "Manage the therapeutic exercise library. Exercises support rich metadata including difficulty, categories, media links, and problem associations."
+---
+
+Exercises form the core library of therapeutic movements. Each exercise can be tagged with multiple category types (body area, exercise type, position, movement, equipment) and linked to one or more clinical problems.
+
+## Schema
+
+<ResponseField name="id" type="integer">
+  Unique identifier for the exercise.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Name of the exercise. Maximum 150 characters.
+</ResponseField>
+
+<ResponseField name="instructions" type="string" required>
+  Step-by-step instructions for performing the exercise.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Optional summary description.
+</ResponseField>
+
+<ResponseField name="duration_minutes" type="integer">
+  Suggested duration in minutes. Must be greater than 0.
+</ResponseField>
+
+<ResponseField name="repetitions" type="integer">
+  Suggested number of repetitions. Must be greater than 0.
+</ResponseField>
+
+<ResponseField name="sets" type="integer">
+  Suggested number of sets. Must be greater than 0.
+</ResponseField>
+
+<ResponseField name="difficulty_level" type="string">
+  One of `beginner`, `intermediate`, or `advanced`.
+</ResponseField>
+
+<ResponseField name="image_url" type="string">
+  Optional URL to a demonstration image.
+</ResponseField>
+
+<ResponseField name="video_url" type="string">
+  Optional URL to a demonstration video.
+</ResponseField>
+
+<ResponseField name="is_predefined" type="boolean">
+  `true` if this exercise is part of the default library; `false` if custom. Defaults to `false`.
+</ResponseField>
+
+<ResponseField name="repetition_suggestions" type="array of strings">
+  Free-text repetition/dosage suggestions (e.g. `["3x10", "Hold 30s"]`).
+</ResponseField>
+
+<ResponseField name="created_at" type="string (datetime)">
+  ISO 8601 timestamp of when the record was created.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string (datetime)">
+  ISO 8601 timestamp of the most recent update.
+</ResponseField>
+
+<ResponseField name="problems" type="array">
+  Clinical problems this exercise targets. See [Problems](/api/problems).
+</ResponseField>
+
+<ResponseField name="body_areas" type="array">
+  Body area categories applied to this exercise.
+
+  <Expandable title="properties">
+    <ResponseField name="id" type="integer">Category ID.</ResponseField>
+    <ResponseField name="name" type="string">Category name.</ResponseField>
+    <ResponseField name="is_custom" type="boolean">Whether the category is user-created.</ResponseField>
+    <ResponseField name="created_at" type="string (datetime)">Created timestamp.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="exercise_types" type="array">
+  Exercise type categories (e.g. Stretch, PROM, AAROM). Same shape as `body_areas`.
+</ResponseField>
+
+<ResponseField name="positions" type="array">
+  Position categories (e.g. Standing, Supine). Same shape as `body_areas`.
+</ResponseField>
+
+<ResponseField name="movements" type="array">
+  Movement categories (e.g. Flexion, Rotation). Same shape as `body_areas`.
+</ResponseField>
+
+<ResponseField name="equipment_types" type="array">
+  Equipment type categories (e.g. Elastic, Ball). Same shape as `body_areas`.
+</ResponseField>
+
+---
+
+## List exercises
+
+<Note>**GET** `/api/v1/exercises/`</Note>
+
+Returns a paginated list of all exercises. Optionally filter by difficulty level.
+
+**Query parameters**
+
+<ParamField query="skip" type="integer">
+  Number of records to skip. Defaults to `0`.
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Maximum number of records to return. Defaults to `100`.
+</ParamField>
+
+<ParamField query="difficulty" type="string">
+  Filter by difficulty level. One of `beginner`, `intermediate`, or `advanced`. When provided, `skip` and `limit` are ignored.
+</ParamField>
+
+<CodeGroup>
+```bash All exercises
+curl http://localhost:8000/api/v1/exercises/?skip=0&limit=10
+```
+
+```bash Filter by difficulty
+curl "http://localhost:8000/api/v1/exercises/?difficulty=beginner"
+```
+</CodeGroup>
+
+```json Response 200
+[
+  {
+    "id": 1,
+    "name": "Quad Set",
+    "description": "Isometric quadriceps strengthening exercise",
+    "instructions": "Lie flat. Tighten the quad by pressing the back of the knee down. Hold 5 seconds.",
+    "duration_minutes": null,
+    "repetitions": 10,
+    "sets": 3,
+    "difficulty_level": "beginner",
+    "image_url": null,
+    "video_url": null,
+    "is_predefined": true,
+    "repetition_suggestions": ["3x10", "Hold 5s each"],
+    "created_at": "2026-01-05T08:00:00Z",
+    "updated_at": "2026-01-05T08:00:00Z",
+    "problems": [],
+    "body_areas": [],
+    "exercise_types": [],
+    "positions": [],
+    "movements": [],
+    "equipment_types": []
+  }
+]
+```
+
+---
+
+## List predefined exercises
+
+<Note>**GET** `/api/v1/exercises/predefined`</Note>
+
+Returns all exercises where `is_predefined` is `true`. These are part of the default exercise library.
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/exercises/predefined
+```
+</CodeGroup>
+
+```json Response 200
+[
+  {
+    "id": 1,
+    "name": "Quad Set",
+    "is_predefined": true
+  }
+]
+```
+
+---
+
+## Create exercise
+
+<Note>**POST** `/api/v1/exercises/`</Note>
+
+Creates a new exercise. All referenced `problem_ids` must exist or a `400` is returned.
+
+**Request body**
+
+<ParamField body="name" type="string" required>
+  Name of the exercise. Between 1 and 150 characters.
+</ParamField>
+
+<ParamField body="instructions" type="string" required>
+  Step-by-step instructions (minimum 1 character).
+</ParamField>
+
+<ParamField body="description" type="string">
+  Optional summary description.
+</ParamField>
+
+<ParamField body="duration_minutes" type="integer">
+  Suggested duration in minutes (must be > 0).
+</ParamField>
+
+<ParamField body="repetitions" type="integer">
+  Suggested repetitions (must be > 0).
+</ParamField>
+
+<ParamField body="sets" type="integer">
+  Suggested sets (must be > 0).
+</ParamField>
+
+<ParamField body="difficulty_level" type="string">
+  One of `beginner`, `intermediate`, or `advanced`.
+</ParamField>
+
+<ParamField body="image_url" type="string">
+  URL to a demonstration image.
+</ParamField>
+
+<ParamField body="video_url" type="string">
+  URL to a demonstration video.
+</ParamField>
+
+<ParamField body="is_predefined" type="boolean">
+  Whether this is a library exercise. Defaults to `false`.
+</ParamField>
+
+<ParamField body="repetition_suggestions" type="array of strings">
+  Free-text dosage suggestions.
+</ParamField>
+
+<ParamField body="problem_ids" type="array of integers">
+  IDs of problems this exercise targets. Each must reference an existing problem.
+</ParamField>
+
+<ParamField body="body_area_ids" type="array of integers">
+  IDs of body area categories to apply.
+</ParamField>
+
+<ParamField body="exercise_type_ids" type="array of integers">
+  IDs of exercise type categories to apply.
+</ParamField>
+
+<ParamField body="position_ids" type="array of integers">
+  IDs of position categories to apply.
+</ParamField>
+
+<ParamField body="movement_ids" type="array of integers">
+  IDs of movement categories to apply.
+</ParamField>
+
+<ParamField body="equipment_type_ids" type="array of integers">
+  IDs of equipment type categories to apply.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X POST http://localhost:8000/api/v1/exercises/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Quad Set",
+    "description": "Isometric quadriceps strengthening exercise",
+    "instructions": "Lie flat. Tighten the quad by pressing the back of the knee down. Hold 5 seconds.",
+    "repetitions": 10,
+    "sets": 3,
+    "difficulty_level": "beginner",
+    "is_predefined": false,
+    "repetition_suggestions": ["3x10", "Hold 5s each"],
+    "problem_ids": [1],
+    "body_area_ids": [2],
+    "exercise_type_ids": [1],
+    "position_ids": [3],
+    "movement_ids": [],
+    "equipment_type_ids": []
+  }'
+```
+</CodeGroup>
+
+```json Response 201
+{
+  "id": 5,
+  "name": "Quad Set",
+  "description": "Isometric quadriceps strengthening exercise",
+  "instructions": "Lie flat. Tighten the quad by pressing the back of the knee down. Hold 5 seconds.",
+  "duration_minutes": null,
+  "repetitions": 10,
+  "sets": 3,
+  "difficulty_level": "beginner",
+  "image_url": null,
+  "video_url": null,
+  "is_predefined": false,
+  "repetition_suggestions": ["3x10", "Hold 5s each"],
+  "created_at": "2026-02-01T10:00:00Z",
+  "updated_at": "2026-02-01T10:00:00Z",
+  "problems": [
+    {
+      "id": 1,
+      "name": "ACL Tear",
+      "joint_id": 1
+    }
+  ],
+  "body_areas": [
+    { "id": 2, "name": "Knee", "is_custom": false, "created_at": "2026-01-01T00:00:00Z" }
+  ],
+  "exercise_types": [
+    { "id": 1, "name": "Static", "is_custom": false, "created_at": "2026-01-01T00:00:00Z" }
+  ],
+  "positions": [
+    { "id": 3, "name": "Supine", "is_custom": false, "created_at": "2026-01-01T00:00:00Z" }
+  ],
+  "movements": [],
+  "equipment_types": []
+}
+```
+
+---
+
+## Get exercise by ID
+
+<Note>**GET** `/api/v1/exercises/{exercise_id}`</Note>
+
+Returns a single exercise with all its categories and associated problems.
+
+**Path parameters**
+
+<ParamField path="exercise_id" type="integer" required>
+  The unique identifier of the exercise.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/exercises/5
+```
+</CodeGroup>
+
+---
+
+## Get exercises by problem
+
+<Note>**GET** `/api/v1/exercises/problem/{problem_id}`</Note>
+
+Returns all exercises associated with a specific problem. Returns `404` if the problem does not exist.
+
+**Path parameters**
+
+<ParamField path="problem_id" type="integer" required>
+  The ID of the problem whose exercises to retrieve.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/exercises/problem/1
+```
+</CodeGroup>
+
+---
+
+## Update exercise
+
+<Note>**PUT** `/api/v1/exercises/{exercise_id}`</Note>
+
+Partially updates an existing exercise. Only fields included in the request body are changed. If `problem_ids` is provided, all IDs must reference existing problems.
+
+**Path parameters**
+
+<ParamField path="exercise_id" type="integer" required>
+  The unique identifier of the exercise to update.
+</ParamField>
+
+**Request body** — all fields are optional
+
+<ParamField body="name" type="string">New name.</ParamField>
+<ParamField body="description" type="string">New description.</ParamField>
+<ParamField body="instructions" type="string">New instructions.</ParamField>
+<ParamField body="duration_minutes" type="integer">New duration (must be > 0).</ParamField>
+<ParamField body="repetitions" type="integer">New repetitions (must be > 0).</ParamField>
+<ParamField body="sets" type="integer">New sets (must be > 0).</ParamField>
+<ParamField body="difficulty_level" type="string">One of `beginner`, `intermediate`, `advanced`.</ParamField>
+<ParamField body="image_url" type="string">New image URL.</ParamField>
+<ParamField body="video_url" type="string">New video URL.</ParamField>
+<ParamField body="is_predefined" type="boolean">New predefined flag.</ParamField>
+<ParamField body="repetition_suggestions" type="array of strings">New dosage suggestions.</ParamField>
+<ParamField body="problem_ids" type="array of integers">Replaces the full set of associated problems.</ParamField>
+<ParamField body="body_area_ids" type="array of integers">Replaces the full set of body area categories.</ParamField>
+<ParamField body="exercise_type_ids" type="array of integers">Replaces the full set of exercise type categories.</ParamField>
+<ParamField body="position_ids" type="array of integers">Replaces the full set of position categories.</ParamField>
+<ParamField body="movement_ids" type="array of integers">Replaces the full set of movement categories.</ParamField>
+<ParamField body="equipment_type_ids" type="array of integers">Replaces the full set of equipment type categories.</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X PUT http://localhost:8000/api/v1/exercises/5 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repetitions": 15,
+    "sets": 4
+  }'
+```
+</CodeGroup>
+
+---
+
+## Delete exercise
+
+<Note>**DELETE** `/api/v1/exercises/{exercise_id}`</Note>
+
+Permanently deletes an exercise. Returns `404` if the exercise does not exist.
+
+**Path parameters**
+
+<ParamField path="exercise_id" type="integer" required>
+  The unique identifier of the exercise to delete.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X DELETE http://localhost:8000/api/v1/exercises/5
+```
+</CodeGroup>
+
+```json Response 200
+{
+  "message": "Exercise deleted successfully"
+}
+```
+
+---
+
+## Add problem to exercise
+
+<Note>**POST** `/api/v1/exercises/{exercise_id}/problems/{problem_id}`</Note>
+
+Associates an additional problem with an existing exercise. Returns `404` if either resource is not found.
+
+**Path parameters**
+
+<ParamField path="exercise_id" type="integer" required>
+  The ID of the exercise.
+</ParamField>
+
+<ParamField path="problem_id" type="integer" required>
+  The ID of the problem to add.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X POST http://localhost:8000/api/v1/exercises/5/problems/2
+```
+</CodeGroup>
+
+---
+
+## Remove problem from exercise
+
+<Note>**DELETE** `/api/v1/exercises/{exercise_id}/problems/{problem_id}`</Note>
+
+Removes the association between an exercise and a problem. Returns `404` if either resource is not found.
+
+**Path parameters**
+
+<ParamField path="exercise_id" type="integer" required>
+  The ID of the exercise.
+</ParamField>
+
+<ParamField path="problem_id" type="integer" required>
+  The ID of the problem to remove.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X DELETE http://localhost:8000/api/v1/exercises/5/problems/2
+```
+</CodeGroup>
+
+---
+
+## Search exercises
+
+<Note>**GET** `/api/v1/exercises/search/{search_term}`</Note>
+
+Returns exercises whose `name`, `description`, or `instructions` contain the search term (case-insensitive).
+
+**Path parameters**
+
+<ParamField path="search_term" type="string" required>
+  The term to search for.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/exercises/search/quad
+```
+</CodeGroup>

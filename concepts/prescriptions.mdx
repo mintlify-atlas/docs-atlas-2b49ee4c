@@ -1,0 +1,197 @@
+---
+title: "Prescriptions"
+description: "Patient prescription lifecycle, structure, and how custom parameters let providers tailor each exercise to the individual."
+---
+
+A **Prescription** is the primary clinical artifact in Digi Rehab. It represents a formal exercise program issued by a provider to a named patient. Each prescription holds one or more **PrescriptionExercises** — ordered line items that reference library exercises and optionally override their default parameters.
+
+## Prescription Fields
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `patient_name` | `string` (max 100) | Yes | Full name of the patient |
+| `patient_email` | `string` | No | Must match `^[^@]+@[^@]+\.[^@]+$` |
+| `provider_name` | `string` (max 100) | Yes | Name of the prescribing clinician |
+| `notes` | `string` | No | Free-text clinical notes attached to the prescription |
+| `status` | `string` | No | One of `active`, `completed`, `cancelled` — defaults to `active` |
+
+## PrescriptionExercise Fields
+
+Each line item inside a prescription links to one exercise and may carry four optional override columns.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `exercise_id` | `integer` | Yes | ID of the exercise from the exercise library |
+| `custom_instructions` | `string` | No | Replaces `Exercise.instructions` for this patient |
+| `custom_duration` | `integer` | No | Overrides `Exercise.duration_minutes` (must be > 0) |
+| `custom_repetitions` | `integer` | No | Overrides `Exercise.repetitions` (must be > 0) |
+| `custom_sets` | `integer` | No | Overrides `Exercise.sets` (must be > 0) |
+
+<Note>
+When a `custom_*` field is `null`, the patient-facing app should fall back to the corresponding default value on the Exercise record itself. Only fields that are explicitly set on the PrescriptionExercise row take precedence.
+</Note>
+
+## Status Lifecycle
+
+Prescriptions move through three statuses:
+
+```
+  ┌─────────┐
+  │ active  │  ← default on creation
+  └────┬────┘
+       │
+   ┌───┴──────┐
+   ▼           ▼
+┌──────────┐  ┌───────────┐
+│completed │  │cancelled  │
+└──────────┘  └───────────┘
+```
+
+| Status | Meaning |
+|---|---|
+| `active` | Prescription is in use by the patient |
+| `completed` | Provider has closed the program as finished |
+| `cancelled` | Prescription was voided before completion |
+
+Status can be updated in two ways:
+
+1. **Full update** — `PUT /api/v1/prescriptions/{id}` with a `status` field in the body.
+2. **Targeted patch** — `PATCH /api/v1/prescriptions/{id}/status?status=completed` for status-only changes.
+
+<Warning>
+The API validates that `status` is exactly one of `active`, `completed`, or `cancelled`. Any other value returns `400 Bad Request`.
+</Warning>
+
+## Complete Prescription JSON Example
+
+```json
+{
+  "id": 42,
+  "patient_name": "Jane Doe",
+  "patient_email": "jane.doe@example.com",
+  "provider_name": "Dr. Sarah Chen",
+  "notes": "Focus on pain-free range. Discontinue if sharp pain occurs.",
+  "status": "active",
+  "created_at": "2024-06-01T09:15:00Z",
+  "updated_at": "2024-06-01T09:15:00Z",
+  "prescription_exercises": [
+    {
+      "id": 101,
+      "prescription_id": 42,
+      "exercise_id": 7,
+      "custom_instructions": "Perform seated only, limit to 45° range.",
+      "custom_duration": null,
+      "custom_repetitions": 8,
+      "custom_sets": 2,
+      "created_at": "2024-06-01T09:15:00Z",
+      "exercise": {
+        "id": 7,
+        "name": "Cervical Rotation Stretch",
+        "instructions": "Slowly rotate head to the right as far as comfortable...",
+        "duration_minutes": null,
+        "repetitions": 10,
+        "sets": 3,
+        "difficulty_level": "beginner"
+      }
+    },
+    {
+      "id": 102,
+      "prescription_id": 42,
+      "exercise_id": 15,
+      "custom_instructions": null,
+      "custom_duration": null,
+      "custom_repetitions": null,
+      "custom_sets": null,
+      "created_at": "2024-06-01T09:15:00Z",
+      "exercise": {
+        "id": 15,
+        "name": "Shoulder Pendulum",
+        "instructions": "Lean forward with arm hanging, make small circles...",
+        "duration_minutes": 2,
+        "repetitions": null,
+        "sets": null,
+        "difficulty_level": "beginner"
+      }
+    }
+  ]
+}
+```
+
+## Creating a Prescription
+
+Send a `POST` to `/api/v1/prescriptions/` with the prescription fields and an `exercises` array:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/prescriptions/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "patient_name": "Jane Doe",
+    "patient_email": "jane.doe@example.com",
+    "provider_name": "Dr. Sarah Chen",
+    "notes": "Focus on pain-free range.",
+    "exercises": [
+      {
+        "exercise_id": 7,
+        "custom_repetitions": 8,
+        "custom_sets": 2,
+        "custom_instructions": "Perform seated only, limit to 45° range."
+      },
+      {
+        "exercise_id": 15
+      }
+    ]
+  }'
+```
+
+<Note>
+All exercise IDs in the `exercises` array are validated before the prescription is saved. If any ID does not exist in the exercise library the entire request is rejected with `400 Bad Request`.
+</Note>
+
+## Looking Up Prescriptions by Patient
+
+The patient lookup endpoint performs a **case-insensitive partial match** on `patient_name`, so partial names work:
+
+```bash
+# Returns all prescriptions where patient_name contains "doe" (any case)
+GET /api/v1/prescriptions/patient/doe
+```
+
+For an exact provider lookup the same pattern applies:
+
+```bash
+GET /api/v1/prescriptions/provider/chen
+```
+
+To search across `patient_name`, `provider_name`, **and** `notes` simultaneously use the general search endpoint:
+
+```bash
+GET /api/v1/prescriptions/search/cervical
+```
+
+## Filtering by Status
+
+```bash
+# List only active prescriptions
+GET /api/v1/prescriptions/?status_filter=active
+
+# List only completed prescriptions
+GET /api/v1/prescriptions/?status_filter=completed
+```
+
+Pagination is supported via `skip` and `limit` query parameters (defaults: `skip=0`, `limit=100`).
+
+## Adding and Removing Exercises Post-Creation
+
+Exercises can be appended to an existing prescription without recreating it:
+
+```bash
+# Add an exercise
+POST /api/v1/prescriptions/{prescription_id}/exercises
+
+# Remove an exercise
+DELETE /api/v1/prescriptions/{prescription_id}/exercises/{exercise_id}
+```
+
+<Tip>
+Use the add/remove endpoints during an active patient session to adjust the program on the fly without losing the prescription's existing history.
+</Tip>

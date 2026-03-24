@@ -1,0 +1,78 @@
+---
+title: "Introduction"
+description: "Digi Rehab is a full-stack exercise prescription platform built for rehabilitation providers — manage joints, problems, exercises, categories, and patient prescriptions from a single system."
+---
+
+Digi Rehab is a FastAPI + React application that gives rehabilitation providers a structured workflow for creating and delivering exercise prescriptions. Providers build a clinical library of joints, problems, and exercises, then compose per-patient prescriptions with custom sets, reps, and instructions — all exposed through a versioned REST API and a Vite-powered React dashboard.
+
+## Features
+
+| Feature | Description |
+|---|---|
+| **Joint management** | Record body joints (knee, shoulder, cervical, etc.) that serve as the root of the clinical hierarchy |
+| **Problem tracking** | Attach specific conditions or complaints to a joint (e.g. knee pain, rotator-cuff impingement) |
+| **Exercise library** | Maintain therapeutic exercises with images, difficulty levels, rep suggestions, and problem associations |
+| **Exercise categories** | Tag exercises by body area, type, position, movement, and equipment for fast filtering |
+| **Prescription system** | Create patient prescriptions that bundle exercises with overridden repetitions, sets, and instructions |
+
+## Data model
+
+The five core tables follow a clear relational hierarchy:
+
+```
+Joint
+  └── Problem (1 joint → N problems)
+        └── Exercise  (M problems ↔ N exercises)
+              └── Category (M exercises ↔ N categories)
+
+Prescription
+  └── PrescriptionExercise (1 prescription → N exercises with custom params)
+```
+
+### Relationships at a glance
+
+- **Joint 1:N Problem** — A joint can be associated with many distinct clinical problems.
+- **Problem M:N Exercise** — A problem can be addressed by many exercises, and an exercise can target many problems.
+- **Exercise M:N Category** — Exercises are tagged across five category dimensions (body area, type, position, movement, equipment).
+- **Prescription 1:N PrescriptionExercise** — A prescription is a named patient document containing one or more exercises with per-prescription overrides.
+
+## Architecture
+
+The backend is a Python 3 FastAPI application backed by SQLAlchemy (SQLite by default; PostgreSQL and MySQL supported). The frontend is a TypeScript React 18 single-page application built with Vite, using TanStack Query for server state, React Hook Form for forms, and Tailwind CSS for styling.
+
+```
+Degi_Rehab/
+├── main.py                      # FastAPI app entry point
+├── init_database.py             # Seed categories and predefined exercises
+├── requirements.txt
+├── .env                         # Local environment variables
+├── database/
+│   ├── database.py              # Engine, session, create_tables()
+│   └── models.py                # SQLAlchemy ORM models
+├── routers/                     # One router per resource
+├── services/                    # Business logic layer
+├── schemas/
+│   └── schemas.py               # Pydantic request/response models
+└── frontend/
+    ├── src/
+    │   ├── App.tsx              # Route definitions
+    │   └── pages/               # Dashboard, Joints, Problems, Exercises, …
+    └── package.json
+```
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Clone the repo, spin up the API and React dashboard, and issue your first prescription in minutes.
+  </Card>
+  <Card title="Data model" icon="database" href="/concepts/data-model">
+    Deep-dive into the five core tables and their relationships.
+  </Card>
+  <Card title="API reference" icon="code" href="/api/overview">
+    Full endpoint reference for joints, problems, exercises, categories, and prescriptions.
+  </Card>
+  <Card title="Deployment" icon="server" href="/deployment/installation">
+    Production deployment guide covering PostgreSQL, environment hardening, and CORS.
+  </Card>
+</CardGroup>

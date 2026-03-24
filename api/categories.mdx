@@ -1,0 +1,456 @@
+---
+title: "Categories API"
+description: "Manage the five exercise category types: body areas, exercise types, positions, movements, and equipment types. Default categories cannot be deleted."
+---
+
+Exercise categories allow clinicians to classify exercises for filtering and discovery. There are five independent category types, each sharing the same schema and CRUD operations.
+
+<Warning>
+DELETE operations only succeed on **custom** categories (those where `is_custom` is `true`). Attempting to delete a default/system category returns `400 Bad Request`.
+</Warning>
+
+## Category schema
+
+All five category types share the same response shape:
+
+<ResponseField name="id" type="integer">
+  Unique identifier for the category.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Display name of the category. Between 1 and 100 characters.
+</ResponseField>
+
+<ResponseField name="is_custom" type="boolean">
+  `true` if this category was created by a user; `false` if it is a system default.
+</ResponseField>
+
+<ResponseField name="created_at" type="string (datetime)">
+  ISO 8601 timestamp of when the record was created.
+</ResponseField>
+
+---
+
+<Tabs>
+  <Tab title="Body Areas">
+
+## Body Areas
+
+Classify exercises by the region of the body being targeted (e.g. Cervical, Lumbar, Knee, Shoulder).
+
+### List body areas
+
+<Note>**GET** `/api/v1/categories/body-areas`</Note>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/categories/body-areas
+```
+</CodeGroup>
+
+```json Response 200
+[
+  { "id": 1, "name": "Cervical", "is_custom": false, "created_at": "2026-01-01T00:00:00Z" },
+  { "id": 2, "name": "Knee",     "is_custom": false, "created_at": "2026-01-01T00:00:00Z" },
+  { "id": 3, "name": "Shoulder", "is_custom": false, "created_at": "2026-01-01T00:00:00Z" }
+]
+```
+
+### Create body area
+
+<Note>**POST** `/api/v1/categories/body-areas`</Note>
+
+New categories are always created with `is_custom: true`.
+
+<ParamField body="name" type="string" required>
+  Name of the body area. Between 1 and 100 characters.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X POST http://localhost:8000/api/v1/categories/body-areas \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Wrist" }'
+```
+</CodeGroup>
+
+```json Response 201
+{ "id": 10, "name": "Wrist", "is_custom": true, "created_at": "2026-02-10T11:00:00Z" }
+```
+
+### Update body area
+
+<Note>**PUT** `/api/v1/categories/body-areas/{category_id}`</Note>
+
+<ParamField path="category_id" type="integer" required>
+  ID of the body area to update.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  New name for the body area.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X PUT http://localhost:8000/api/v1/categories/body-areas/10 \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Wrist/Hand" }'
+```
+</CodeGroup>
+
+```json Response 200
+{ "id": 10, "name": "Wrist/Hand", "is_custom": true, "created_at": "2026-02-10T11:00:00Z" }
+```
+
+### Delete body area
+
+<Note>**DELETE** `/api/v1/categories/body-areas/{category_id}`</Note>
+
+<ParamField path="category_id" type="integer" required>
+  ID of the body area to delete. Must be a custom category (`is_custom: true`).
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X DELETE http://localhost:8000/api/v1/categories/body-areas/10
+```
+</CodeGroup>
+
+```json Response 200
+{ "message": "Body area deleted successfully" }
+```
+
+  </Tab>
+  <Tab title="Exercise Types">
+
+## Exercise Types
+
+Classify exercises by therapeutic modality (e.g. Stretch, PROM, AAROM, Mobilization, Static, Resisted).
+
+### List exercise types
+
+<Note>**GET** `/api/v1/categories/exercise-types`</Note>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/categories/exercise-types
+```
+</CodeGroup>
+
+```json Response 200
+[
+  { "id": 1, "name": "Stretch",      "is_custom": false, "created_at": "2026-01-01T00:00:00Z" },
+  { "id": 2, "name": "PROM",         "is_custom": false, "created_at": "2026-01-01T00:00:00Z" },
+  { "id": 3, "name": "Mobilization", "is_custom": false, "created_at": "2026-01-01T00:00:00Z" }
+]
+```
+
+### Create exercise type
+
+<Note>**POST** `/api/v1/categories/exercise-types`</Note>
+
+<ParamField body="name" type="string" required>
+  Name of the exercise type. Between 1 and 100 characters.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X POST http://localhost:8000/api/v1/categories/exercise-types \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Aquatic" }'
+```
+</CodeGroup>
+
+```json Response 201
+{ "id": 12, "name": "Aquatic", "is_custom": true, "created_at": "2026-02-10T11:00:00Z" }
+```
+
+### Update exercise type
+
+<Note>**PUT** `/api/v1/categories/exercise-types/{category_id}`</Note>
+
+<ParamField path="category_id" type="integer" required>
+  ID of the exercise type to update.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  New name.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X PUT http://localhost:8000/api/v1/categories/exercise-types/12 \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Hydrotherapy" }'
+```
+</CodeGroup>
+
+### Delete exercise type
+
+<Note>**DELETE** `/api/v1/categories/exercise-types/{category_id}`</Note>
+
+<ParamField path="category_id" type="integer" required>
+  ID of the exercise type to delete. Must be custom.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X DELETE http://localhost:8000/api/v1/categories/exercise-types/12
+```
+</CodeGroup>
+
+```json Response 200
+{ "message": "Exercise type deleted successfully" }
+```
+
+  </Tab>
+  <Tab title="Positions">
+
+## Positions
+
+Classify exercises by the starting body position (e.g. Standing, Sitting, Kneeling, Supine, Prone).
+
+### List positions
+
+<Note>**GET** `/api/v1/categories/positions`</Note>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/categories/positions
+```
+</CodeGroup>
+
+```json Response 200
+[
+  { "id": 1, "name": "Standing", "is_custom": false, "created_at": "2026-01-01T00:00:00Z" },
+  { "id": 2, "name": "Supine",   "is_custom": false, "created_at": "2026-01-01T00:00:00Z" },
+  { "id": 3, "name": "Prone",    "is_custom": false, "created_at": "2026-01-01T00:00:00Z" }
+]
+```
+
+### Create position
+
+<Note>**POST** `/api/v1/categories/positions`</Note>
+
+<ParamField body="name" type="string" required>
+  Name of the position. Between 1 and 100 characters.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X POST http://localhost:8000/api/v1/categories/positions \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "4-Point Kneeling" }'
+```
+</CodeGroup>
+
+```json Response 201
+{ "id": 9, "name": "4-Point Kneeling", "is_custom": true, "created_at": "2026-02-10T11:00:00Z" }
+```
+
+### Update position
+
+<Note>**PUT** `/api/v1/categories/positions/{category_id}`</Note>
+
+<ParamField path="category_id" type="integer" required>
+  ID of the position to update.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  New name.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X PUT http://localhost:8000/api/v1/categories/positions/9 \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Quadruped" }'
+```
+</CodeGroup>
+
+### Delete position
+
+<Note>**DELETE** `/api/v1/categories/positions/{category_id}`</Note>
+
+<ParamField path="category_id" type="integer" required>
+  ID of the position to delete. Must be custom.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X DELETE http://localhost:8000/api/v1/categories/positions/9
+```
+</CodeGroup>
+
+```json Response 200
+{ "message": "Position deleted successfully" }
+```
+
+  </Tab>
+  <Tab title="Movements">
+
+## Movements
+
+Classify exercises by the primary movement pattern (e.g. Flexion, Extension, Rotation, Abduction).
+
+### List movements
+
+<Note>**GET** `/api/v1/categories/movements`</Note>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/categories/movements
+```
+</CodeGroup>
+
+```json Response 200
+[
+  { "id": 1, "name": "Flexion",   "is_custom": false, "created_at": "2026-01-01T00:00:00Z" },
+  { "id": 2, "name": "Extension", "is_custom": false, "created_at": "2026-01-01T00:00:00Z" },
+  { "id": 3, "name": "Rotation",  "is_custom": false, "created_at": "2026-01-01T00:00:00Z" }
+]
+```
+
+### Create movement
+
+<Note>**POST** `/api/v1/categories/movements`</Note>
+
+<ParamField body="name" type="string" required>
+  Name of the movement. Between 1 and 100 characters.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X POST http://localhost:8000/api/v1/categories/movements \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Lateral Shift" }'
+```
+</CodeGroup>
+
+```json Response 201
+{ "id": 11, "name": "Lateral Shift", "is_custom": true, "created_at": "2026-02-10T11:00:00Z" }
+```
+
+### Update movement
+
+<Note>**PUT** `/api/v1/categories/movements/{category_id}`</Note>
+
+<ParamField path="category_id" type="integer" required>
+  ID of the movement to update.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  New name.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X PUT http://localhost:8000/api/v1/categories/movements/11 \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Lateral Glide" }'
+```
+</CodeGroup>
+
+### Delete movement
+
+<Note>**DELETE** `/api/v1/categories/movements/{category_id}`</Note>
+
+<ParamField path="category_id" type="integer" required>
+  ID of the movement to delete. Must be custom.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X DELETE http://localhost:8000/api/v1/categories/movements/11
+```
+</CodeGroup>
+
+```json Response 200
+{ "message": "Movement deleted successfully" }
+```
+
+  </Tab>
+  <Tab title="Equipment Types">
+
+## Equipment Types
+
+Classify exercises by the equipment required (e.g. Elastic, Weight, Ball, TRX, No Device).
+
+### List equipment types
+
+<Note>**GET** `/api/v1/categories/equipment-types`</Note>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/categories/equipment-types
+```
+</CodeGroup>
+
+```json Response 200
+[
+  { "id": 1, "name": "No Device", "is_custom": false, "created_at": "2026-01-01T00:00:00Z" },
+  { "id": 2, "name": "Elastic",   "is_custom": false, "created_at": "2026-01-01T00:00:00Z" },
+  { "id": 3, "name": "Ball",      "is_custom": false, "created_at": "2026-01-01T00:00:00Z" }
+]
+```
+
+### Create equipment type
+
+<Note>**POST** `/api/v1/categories/equipment-types`</Note>
+
+<ParamField body="name" type="string" required>
+  Name of the equipment type. Between 1 and 100 characters.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X POST http://localhost:8000/api/v1/categories/equipment-types \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Foam Roller" }'
+```
+</CodeGroup>
+
+```json Response 201
+{ "id": 15, "name": "Foam Roller", "is_custom": true, "created_at": "2026-02-10T11:00:00Z" }
+```
+
+### Update equipment type
+
+<Note>**PUT** `/api/v1/categories/equipment-types/{category_id}`</Note>
+
+<ParamField path="category_id" type="integer" required>
+  ID of the equipment type to update.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  New name.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X PUT http://localhost:8000/api/v1/categories/equipment-types/15 \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Foam Roller / Trigger Point" }'
+```
+</CodeGroup>
+
+### Delete equipment type
+
+<Note>**DELETE** `/api/v1/categories/equipment-types/{category_id}`</Note>
+
+<ParamField path="category_id" type="integer" required>
+  ID of the equipment type to delete. Must be custom.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X DELETE http://localhost:8000/api/v1/categories/equipment-types/15
+```
+</CodeGroup>
+
+```json Response 200
+{ "message": "Equipment type deleted successfully" }
+```
+
+  </Tab>
+</Tabs>

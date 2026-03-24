@@ -1,97 +1,102 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Digi Rehab"
+description: "A comprehensive exercise prescription system for rehabilitation providers — manage joints, problems, exercises, and patient prescriptions."
 ---
 
-## Setting up
-
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get Digi Rehab running in minutes with our step-by-step setup guide.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore all REST endpoints for joints, exercises, prescriptions, and more.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Core Concepts" icon="book" href="/concepts/data-model">
+    Understand the data model: joints, problems, exercises, and prescriptions.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Deployment" icon="server" href="/deployment/installation">
+    Deploy to production with PostgreSQL, environment variables, and Docker.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What is Digi Rehab?
 
-Everything you need to create world-class documentation.
+Digi Rehab is a full-stack rehabilitation exercise prescription platform built on **FastAPI** and **React**. It gives healthcare providers a structured way to build and manage exercise programs for their patients — from cataloguing therapeutic exercises to issuing personalized prescriptions.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+The system is organized around four core entities:
 
-## Need inspiration?
+- **Joints** — body joints that can be affected (knee, shoulder, lumbar, etc.)
+- **Problems** — specific conditions associated with a joint (pain, stiffness, post-surgical)
+- **Exercises** — therapeutic exercises with instructions, media, difficulty levels, and multi-dimensional categories
+- **Prescriptions** — patient-specific exercise plans with custom repetitions, sets, and instructions
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Exercise library" icon="dumbbell">
+    Build a library of therapeutic exercises with images, videos, difficulty levels, and detailed instructions.
+  </Card>
+  <Card title="Multi-dimensional categories" icon="tags">
+    Classify exercises by body area, exercise type, position, movement, and equipment using predefined or custom taxonomies.
+  </Card>
+  <Card title="Patient prescriptions" icon="clipboard-list">
+    Issue personalized prescriptions with overridable repetitions, sets, duration, and custom instructions per exercise.
+  </Card>
+  <Card title="React dashboard" icon="layout-dashboard">
+    Manage all data through a React/TypeScript frontend with real-time updates via TanStack Query.
+  </Card>
+  <Card title="Flexible database support" icon="database">
+    Works with SQLite for development and PostgreSQL or MySQL for production via SQLAlchemy.
+  </Card>
+  <Card title="Auto-generated API docs" icon="file-code">
+    Interactive Swagger UI and ReDoc documentation available at `/docs` and `/redoc`.
+  </Card>
+</CardGroup>
+
+## Architecture overview
+
+```
+Digi Rehab
+├── Backend (FastAPI + SQLAlchemy)
+│   ├── routers/        — API endpoint definitions
+│   ├── services/       — Business logic layer
+│   ├── schemas/        — Pydantic request/response models
+│   └── database/       — SQLAlchemy models and connection
+└── Frontend (React + TypeScript + Vite)
+    ├── pages/          — Dashboard, Joints, Problems, Exercises, Prescriptions
+    ├── components/     — Shared UI components
+    └── api/            — Axios API client
+```
+
+## Get started
+
+<Steps>
+  <Step title="Install dependencies">
+    Install Python packages and initialize the database.
+
+    ```bash
+    pip install -r requirements.txt
+    python init_database.py
+    ```
+  </Step>
+  <Step title="Start the API server">
+    Run the FastAPI backend on port 8000.
+
+    ```bash
+    python main.py
+    ```
+  </Step>
+  <Step title="Start the frontend">
+    Launch the React development server.
+
+    ```bash
+    cd frontend && npm install && npm run dev
+    ```
+  </Step>
+  <Step title="Open the app">
+    Visit `http://localhost:5173` for the dashboard, or `http://localhost:8000/docs` for the interactive API explorer.
+  </Step>
+</Steps>
+
+<Note>
+  See the [Quickstart](/quickstart) guide for a complete walkthrough including database configuration and your first prescription.
+</Note>

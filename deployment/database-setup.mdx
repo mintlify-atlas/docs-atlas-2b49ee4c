@@ -1,0 +1,175 @@
+---
+title: "Database Setup"
+description: "Configure the database layer for Digi Rehab, including SQLite (default), PostgreSQL, and MySQL."
+---
+
+Digi Rehab uses [SQLAlchemy](https://www.sqlalchemy.org/) as its ORM. The active database is controlled entirely by the `DATABASE_URL` environment variable, so switching databases requires no code changes.
+
+## Choosing a Database
+
+<Tabs>
+  <Tab title="SQLite (default)">
+    SQLite is the default and requires no additional installation or configuration. The database is stored as a single file (`digi_rehab.db`) in the project root.
+
+    ```bash .env
+    DATABASE_URL=sqlite:///./digi_rehab.db
+    ```
+
+    SQLite is configured with `check_same_thread=False` to allow FastAPI's async request handling to work correctly:
+
+    ```python database/database.py
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        echo=False
+    )
+    ```
+
+    <Warning>
+      SQLite is suitable for development and single-user testing only. It does not support concurrent writes, has no built-in access control, and stores all data in a local file that is easily lost. Do not use SQLite in a shared or production environment.
+    </Warning>
+  </Tab>
+
+  <Tab title="PostgreSQL">
+    ### Install the driver
+
+    The PostgreSQL driver (`psycopg[binary]`) is already included in `requirements.txt`:
+
+    ```bash
+    pip install "psycopg[binary]>=3.1.0"
+    ```
+
+    ### Configure DATABASE_URL
+
+    ```bash .env
+    DATABASE_URL=postgresql://username:password@localhost:5432/digi_rehab
+    ```
+
+    Replace `username`, `password`, `localhost`, `5432`, and `digi_rehab` with your actual credentials and host details.
+
+    ### Connection pool settings
+
+    When a non-SQLite URL is detected, the engine is created with a connection pool for better performance under concurrent load:
+
+    ```python database/database.py
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        pool_size=10,
+        max_overflow=20,
+        echo=False
+    )
+    ```
+
+    ### Create the database
+
+    Before running the application, create the target database in PostgreSQL:
+
+    ```sql
+    CREATE DATABASE digi_rehab;
+    ```
+  </Tab>
+
+  <Tab title="MySQL">
+    ### Install the driver
+
+    `pymysql` is not bundled in `requirements.txt`; install it manually:
+
+    ```bash
+    pip install pymysql
+    ```
+
+    ### Configure DATABASE_URL
+
+    ```bash .env
+    DATABASE_URL=mysql+pymysql://username:password@localhost:3306/digi_rehab
+    ```
+
+    Replace `username`, `password`, `localhost`, `3306`, and `digi_rehab` with your actual credentials and host details.
+
+    ### Connection pool settings
+
+    MySQL uses the same pooled engine configuration as PostgreSQL:
+
+    ```python database/database.py
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        pool_size=10,
+        max_overflow=20,
+        echo=False
+    )
+    ```
+
+    ### Create the database
+
+    Before running the application, create the target database in MySQL:
+
+    ```sql
+    CREATE DATABASE digi_rehab;
+    ```
+  </Tab>
+</Tabs>
+
+## Initializing the Database
+
+Run `init_database.py` once after setting your `DATABASE_URL` to create all tables and populate default category data:
+
+```bash
+python init_database.py
+```
+
+The script performs two operations:
+
+1. **`init_categories()`** — Calls `Base.metadata.create_all()` to create every table, then seeds the five category tables:
+   - `BodyArea` — 13 default body areas (Face/TMJ, Cervical, Knee, etc.)
+   - `ExerciseType` — 13 types (Stretch, PROM, AAROM, Resisted, etc.)
+   - `Position` — 6 positions (Standing, Sitting, Supine, etc.)
+   - `Movement` — 13 movements (Flexion, Extension, Rotation, etc.)
+   - `EquipmentType` — 14 equipment types (Elastic, Weight, TRX, No Device, etc.)
+
+2. **`init_predefined_exercises()`** — Seeds a library of 19 predefined rehabilitation exercises spanning all body areas, each marked with `is_predefined=True`.
+
+Running the script a second time is safe — it checks for existing records before inserting, so no duplicates are created.
+
+<Info>
+  Tables are also created automatically on application startup via the `lifespan` event in `main.py`. The `init_database.py` script is still required to seed the default category and exercise data.
+</Info>
+
+## Database Migrations (Alembic)
+
+Alembic (`>=1.12.0`) is included in `requirements.txt` for schema migrations. Use it when making changes to models in a production environment instead of dropping and recreating tables.
+
+<Steps>
+  <Step title="Initialize Alembic">
+    Run once in the project root to create the `alembic/` directory and `alembic.ini` config file:
+
+    ```bash
+    alembic init alembic
+    ```
+  </Step>
+
+  <Step title="Generate a migration">
+    After modifying a SQLAlchemy model, auto-generate a migration script:
+
+    ```bash
+    alembic revision --autogenerate -m "Initial migration"
+    ```
+  </Step>
+
+  <Step title="Apply migrations">
+    Upgrade the database schema to the latest revision:
+
+    ```bash
+    alembic upgrade head
+    ```
+  </Step>
+</Steps>
+
+## Connection String Reference
+
+| Database   | CONNECTION_URL format |
+|------------|-----------------------|
+| SQLite     | `sqlite:///./digi_rehab.db` |
+| PostgreSQL | `postgresql://user:pass@host:5432/digi_rehab` |
+| MySQL      | `mysql+pymysql://user:pass@host:3306/digi_rehab` |

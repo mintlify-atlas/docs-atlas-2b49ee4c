@@ -1,0 +1,258 @@
+---
+title: "Joints API"
+description: "Create, read, update, delete, and search body joints. Joints are the top-level clinical entities that group related problems."
+---
+
+Joints represent anatomical regions of the body (e.g. Knee, Shoulder, Lumbar Spine). Each joint can have many associated [Problems](/api/problems).
+
+## Schema
+
+<ResponseField name="id" type="integer">
+  Unique identifier for the joint.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Unique name of the joint. Maximum 100 characters.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Optional free-text description of the joint.
+</ResponseField>
+
+<ResponseField name="created_at" type="string (datetime)">
+  ISO 8601 timestamp of when the record was created.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string (datetime)">
+  ISO 8601 timestamp of the most recent update.
+</ResponseField>
+
+<ResponseField name="problems" type="array">
+  List of problems associated with this joint. See [Problems](/api/problems) for the problem schema.
+</ResponseField>
+
+---
+
+## List joints
+
+<Note>**GET** `/api/v1/joints/`</Note>
+
+Returns a paginated list of all joints.
+
+**Query parameters**
+
+<ParamField query="skip" type="integer">
+  Number of records to skip. Defaults to `0`.
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Maximum number of records to return. Defaults to `100`.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/joints/?skip=0&limit=10
+```
+</CodeGroup>
+
+```json Response 200
+[
+  {
+    "id": 1,
+    "name": "Knee",
+    "description": "Hinge joint connecting the femur and tibia",
+    "created_at": "2026-01-10T09:00:00Z",
+    "updated_at": "2026-01-10T09:00:00Z",
+    "problems": []
+  }
+]
+```
+
+---
+
+## Create joint
+
+<Note>**POST** `/api/v1/joints/`</Note>
+
+Creates a new joint. Returns `400` if a joint with the same name already exists.
+
+**Request body**
+
+<ParamField body="name" type="string" required>
+  Unique name for the joint. Between 1 and 100 characters.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Optional description of the joint.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X POST http://localhost:8000/api/v1/joints/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Shoulder",
+    "description": "Ball-and-socket joint of the upper arm"
+  }'
+```
+</CodeGroup>
+
+```json Response 201
+{
+  "id": 2,
+  "name": "Shoulder",
+  "description": "Ball-and-socket joint of the upper arm",
+  "created_at": "2026-01-15T12:00:00Z",
+  "updated_at": "2026-01-15T12:00:00Z",
+  "problems": []
+}
+```
+
+<Warning>
+Returns `400 Bad Request` with `"Joint with this name already exists"` if the name is not unique.
+</Warning>
+
+---
+
+## Get joint by ID
+
+<Note>**GET** `/api/v1/joints/{joint_id}`</Note>
+
+Returns a single joint including its associated problems.
+
+**Path parameters**
+
+<ParamField path="joint_id" type="integer" required>
+  The unique identifier of the joint.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/joints/1
+```
+</CodeGroup>
+
+```json Response 200
+{
+  "id": 1,
+  "name": "Knee",
+  "description": "Hinge joint connecting the femur and tibia",
+  "created_at": "2026-01-10T09:00:00Z",
+  "updated_at": "2026-01-10T09:00:00Z",
+  "problems": [
+    {
+      "id": 3,
+      "name": "ACL Tear",
+      "description": "Rupture of the anterior cruciate ligament",
+      "symptoms": "Sudden pain, swelling, instability",
+      "joint_id": 1,
+      "created_at": "2026-01-12T10:00:00Z",
+      "updated_at": "2026-01-12T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## Update joint
+
+<Note>**PUT** `/api/v1/joints/{joint_id}`</Note>
+
+Partially updates an existing joint. Only fields included in the request body are changed.
+
+**Path parameters**
+
+<ParamField path="joint_id" type="integer" required>
+  The unique identifier of the joint to update.
+</ParamField>
+
+**Request body** — all fields are optional
+
+<ParamField body="name" type="string">
+  New name for the joint. Between 1 and 100 characters.
+</ParamField>
+
+<ParamField body="description" type="string">
+  New description for the joint.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X PUT http://localhost:8000/api/v1/joints/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Weight-bearing hinge joint of the lower limb"
+  }'
+```
+</CodeGroup>
+
+```json Response 200
+{
+  "id": 1,
+  "name": "Knee",
+  "description": "Weight-bearing hinge joint of the lower limb",
+  "created_at": "2026-01-10T09:00:00Z",
+  "updated_at": "2026-02-01T14:30:00Z",
+  "problems": []
+}
+```
+
+---
+
+## Delete joint
+
+<Note>**DELETE** `/api/v1/joints/{joint_id}`</Note>
+
+Permanently deletes a joint. Returns `404` if the joint does not exist.
+
+**Path parameters**
+
+<ParamField path="joint_id" type="integer" required>
+  The unique identifier of the joint to delete.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X DELETE http://localhost:8000/api/v1/joints/1
+```
+</CodeGroup>
+
+```json Response 200
+{
+  "message": "Joint deleted successfully"
+}
+```
+
+---
+
+## Search joints
+
+<Note>**GET** `/api/v1/joints/search/{search_term}`</Note>
+
+Returns all joints whose `name` or `description` contains the search term (case-insensitive).
+
+**Path parameters**
+
+<ParamField path="search_term" type="string" required>
+  The term to search for within joint names and descriptions.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/joints/search/knee
+```
+</CodeGroup>
+
+```json Response 200
+[
+  {
+    "id": 1,
+    "name": "Knee",
+    "description": "Hinge joint connecting the femur and tibia",
+    "created_at": "2026-01-10T09:00:00Z",
+    "updated_at": "2026-01-10T09:00:00Z",
+    "problems": []
+  }
+]
+```

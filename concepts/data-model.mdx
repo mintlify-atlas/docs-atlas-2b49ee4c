@@ -1,0 +1,174 @@
+---
+title: "Data Model"
+description: "The five core database tables that power Digi Rehab and how they relate to each other."
+---
+
+Digi Rehab's database is built on five core entities: **Joints**, **Problems**, **Exercises**, **Prescriptions**, and **PrescriptionExercises**. A separate set of five category tables hangs off Exercises through pure association tables, providing the multi-dimensional taxonomy described in [Exercise Categories](/concepts/exercise-categories).
+
+## Entity Relationship Overview
+
+```
+Joint (1) ──────────── (N) Problem
+                              │
+                        (M) ──┤── (N) Exercise
+                                       │
+               ┌───────────────────────┼───────────────────────┐
+               │           │           │           │           │
+          BodyArea  ExerciseType   Position    Movement  EquipmentType
+          (M:N)      (M:N)          (M:N)       (M:N)      (M:N)
+
+Prescription (1) ──── (N) PrescriptionExercise ──── (1) Exercise
+```
+
+- A **Joint** owns one or more **Problems** (cascade delete).
+- A **Problem** is linked to many **Exercises**, and an Exercise can address many Problems (`problem_exercises` association table).
+- An **Exercise** is tagged with up to five category dimensions, each a M:N relationship.
+- A **Prescription** contains one or more **PrescriptionExercises**, each of which references a single Exercise and carries optional per-prescription parameter overrides.
+
+## Core Entity Fields
+
+<AccordionGroup>
+
+<Accordion title="Joint">
+
+Table: `joints`
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | `Integer` | PK, indexed | Auto-increment primary key |
+| `name` | `String(100)` | NOT NULL, unique, indexed | Human-readable joint name |
+| `description` | `Text` | nullable | Optional clinical description |
+| `created_at` | `DateTime(timezone=True)` | server default `now()` | Creation timestamp |
+| `updated_at` | `DateTime(timezone=True)` | server default `now()`, on update | Last modification timestamp |
+
+**Relationships**
+
+- `problems` → `List[Problem]` — one-to-many with `cascade="all, delete-orphan"`
+
+</Accordion>
+
+<Accordion title="Problem">
+
+Table: `problems`
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | `Integer` | PK, indexed | Auto-increment primary key |
+| `name` | `String(150)` | NOT NULL, indexed | Name of the clinical problem |
+| `description` | `Text` | nullable | Detailed description |
+| `symptoms` | `Text` | nullable | Associated symptoms |
+| `joint_id` | `Integer` | FK → `joints.id`, NOT NULL | Parent joint |
+| `created_at` | `DateTime(timezone=True)` | server default `now()` | Creation timestamp |
+| `updated_at` | `DateTime(timezone=True)` | server default `now()`, on update | Last modification timestamp |
+
+**Relationships**
+
+- `joint` → `Joint` — many-to-one back-reference
+- `exercises` → `List[Exercise]` — M:N via `problem_exercises`
+
+</Accordion>
+
+<Accordion title="Exercise">
+
+Table: `exercises`
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | `Integer` | PK, indexed | Auto-increment primary key |
+| `name` | `String(150)` | NOT NULL, indexed | Exercise name |
+| `description` | `Text` | nullable | Brief description |
+| `instructions` | `Text` | NOT NULL | Step-by-step instructions |
+| `duration_minutes` | `Integer` | nullable | Default duration in minutes |
+| `repetitions` | `Integer` | nullable | Default repetition count |
+| `sets` | `Integer` | nullable | Default set count |
+| `difficulty_level` | `String(20)` | nullable | `beginner`, `intermediate`, or `advanced` |
+| `image_url` | `String(500)` | nullable | URL to exercise reference image |
+| `video_url` | `String(500)` | nullable | Optional video URL |
+| `is_predefined` | `Boolean` | default `False` | `True` = part of the built-in library |
+| `repetition_suggestions` | `Text` | nullable | JSON array of suggestion strings, e.g. `["10 reps x 3 sets"]` |
+| `created_at` | `DateTime(timezone=True)` | server default `now()` | Creation timestamp |
+| `updated_at` | `DateTime(timezone=True)` | server default `now()`, on update | Last modification timestamp |
+
+**Relationships**
+
+- `problems` → `List[Problem]` — M:N via `problem_exercises`
+- `body_areas` → `List[BodyArea]` — M:N via `exercise_body_areas`
+- `exercise_types` → `List[ExerciseType]` — M:N via `exercise_types_link`
+- `positions` → `List[Position]` — M:N via `exercise_positions`
+- `movements` → `List[Movement]` — M:N via `exercise_movements`
+- `equipment_types` → `List[EquipmentType]` — M:N via `exercise_equipment`
+
+</Accordion>
+
+<Accordion title="Prescription">
+
+Table: `prescriptions`
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | `Integer` | PK, indexed | Auto-increment primary key |
+| `patient_name` | `String(100)` | NOT NULL | Full name of the patient |
+| `patient_email` | `String(100)` | nullable | Patient contact email |
+| `provider_name` | `String(100)` | NOT NULL | Prescribing clinician's name |
+| `notes` | `Text` | nullable | Free-text clinical notes |
+| `status` | `String(20)` | default `"active"` | `active`, `completed`, or `cancelled` |
+| `created_at` | `DateTime(timezone=True)` | server default `now()` | Creation timestamp |
+| `updated_at` | `DateTime(timezone=True)` | server default `now()`, on update | Last modification timestamp |
+
+**Relationships**
+
+- `prescription_exercises` → `List[PrescriptionExercise]` — one-to-many with `cascade="all, delete-orphan"`
+
+</Accordion>
+
+<Accordion title="PrescriptionExercise">
+
+Table: `prescription_exercises`
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | `Integer` | PK, indexed | Auto-increment primary key |
+| `prescription_id` | `Integer` | FK → `prescriptions.id`, NOT NULL | Parent prescription |
+| `exercise_id` | `Integer` | FK → `exercises.id`, NOT NULL | Referenced exercise |
+| `custom_instructions` | `Text` | nullable | Overrides `Exercise.instructions` for this prescription |
+| `custom_duration` | `Integer` | nullable | Overrides `Exercise.duration_minutes` |
+| `custom_repetitions` | `Integer` | nullable | Overrides `Exercise.repetitions` |
+| `custom_sets` | `Integer` | nullable | Overrides `Exercise.sets` |
+| `created_at` | `DateTime(timezone=True)` | server default `now()` | Creation timestamp |
+
+**Relationships**
+
+- `prescription` → `Prescription` — many-to-one back-reference
+- `exercise` → `Exercise` — many-to-one (no back-populate)
+
+</Accordion>
+
+</AccordionGroup>
+
+## Association Tables
+
+These pure join tables carry no additional columns beyond the two foreign keys that form the composite primary key.
+
+| Table | Left FK | Right FK |
+|---|---|---|
+| `problem_exercises` | `problems.id` | `exercises.id` |
+| `exercise_body_areas` | `exercises.id` | `body_areas.id` |
+| `exercise_types_link` | `exercises.id` | `exercise_types.id` |
+| `exercise_positions` | `exercises.id` | `positions.id` |
+| `exercise_movements` | `exercises.id` | `movements.id` |
+| `exercise_equipment` | `exercises.id` | `equipment_types.id` |
+
+## Category Table Structure
+
+All five category tables (`body_areas`, `exercise_types`, `positions`, `movements`, `equipment_types`) share an identical schema:
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `Integer` PK | Auto-increment |
+| `name` | `String(100)` NOT NULL, unique | Display name |
+| `is_custom` | `Boolean` default `False` | `True` for user-created entries |
+| `created_at` | `DateTime(timezone=True)` | Server default timestamp |
+
+<Note>
+Default seed categories are created with `is_custom=False` and **cannot be deleted** via the API. Only categories where `is_custom=True` are eligible for deletion.
+</Note>

@@ -1,0 +1,349 @@
+---
+title: "Problems API"
+description: "Create, read, update, delete, and search clinical problems. Every problem belongs to a joint and can be linked to multiple exercises."
+---
+
+Problems represent clinical conditions or diagnoses associated with a specific joint (e.g. ACL Tear on the Knee joint, Rotator Cuff Tear on the Shoulder joint). Each problem can be addressed by multiple [Exercises](/api/exercises).
+
+## Schema
+
+<ResponseField name="id" type="integer">
+  Unique identifier for the problem.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Name of the problem. Maximum 150 characters.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Optional free-text description of the condition.
+</ResponseField>
+
+<ResponseField name="symptoms" type="string">
+  Optional description of clinical symptoms.
+</ResponseField>
+
+<ResponseField name="joint_id" type="integer" required>
+  ID of the joint this problem belongs to.
+</ResponseField>
+
+<ResponseField name="created_at" type="string (datetime)">
+  ISO 8601 timestamp of when the record was created.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string (datetime)">
+  ISO 8601 timestamp of the most recent update.
+</ResponseField>
+
+<ResponseField name="joint" type="object">
+  The parent joint object. See [Joints](/api/joints) for the joint schema.
+
+  <Expandable title="properties">
+    <ResponseField name="id" type="integer">Joint ID.</ResponseField>
+    <ResponseField name="name" type="string">Joint name.</ResponseField>
+    <ResponseField name="description" type="string">Joint description.</ResponseField>
+    <ResponseField name="created_at" type="string (datetime)">Created timestamp.</ResponseField>
+    <ResponseField name="updated_at" type="string (datetime)">Updated timestamp.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="exercises" type="array">
+  List of exercises associated with this problem. See [Exercises](/api/exercises) for the exercise schema.
+</ResponseField>
+
+---
+
+## List problems
+
+<Note>**GET** `/api/v1/problems/`</Note>
+
+Returns a paginated list of all problems.
+
+**Query parameters**
+
+<ParamField query="skip" type="integer">
+  Number of records to skip. Defaults to `0`.
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Maximum number of records to return. Defaults to `100`.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/problems/?skip=0&limit=10
+```
+</CodeGroup>
+
+```json Response 200
+[
+  {
+    "id": 1,
+    "name": "ACL Tear",
+    "description": "Rupture of the anterior cruciate ligament",
+    "symptoms": "Sudden pain, swelling, instability",
+    "joint_id": 1,
+    "created_at": "2026-01-12T10:00:00Z",
+    "updated_at": "2026-01-12T10:00:00Z",
+    "joint": null,
+    "exercises": []
+  }
+]
+```
+
+---
+
+## Create problem
+
+<Note>**POST** `/api/v1/problems/`</Note>
+
+Creates a new problem. Returns `400` if the referenced `joint_id` does not exist.
+
+**Request body**
+
+<ParamField body="name" type="string" required>
+  Name of the problem. Between 1 and 150 characters.
+</ParamField>
+
+<ParamField body="joint_id" type="integer" required>
+  ID of the joint this problem belongs to. Must reference an existing joint.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Optional description of the condition.
+</ParamField>
+
+<ParamField body="symptoms" type="string">
+  Optional description of symptoms.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X POST http://localhost:8000/api/v1/problems/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "ACL Tear",
+    "description": "Rupture of the anterior cruciate ligament",
+    "symptoms": "Sudden pain, swelling, instability",
+    "joint_id": 1
+  }'
+```
+</CodeGroup>
+
+```json Response 201
+{
+  "id": 1,
+  "name": "ACL Tear",
+  "description": "Rupture of the anterior cruciate ligament",
+  "symptoms": "Sudden pain, swelling, instability",
+  "joint_id": 1,
+  "created_at": "2026-01-12T10:00:00Z",
+  "updated_at": "2026-01-12T10:00:00Z",
+  "joint": {
+    "id": 1,
+    "name": "Knee",
+    "description": "Hinge joint connecting the femur and tibia",
+    "created_at": "2026-01-10T09:00:00Z",
+    "updated_at": "2026-01-10T09:00:00Z"
+  },
+  "exercises": []
+}
+```
+
+<Warning>
+Returns `400 Bad Request` with `"Joint not found"` if the supplied `joint_id` does not exist.
+</Warning>
+
+---
+
+## Get problem by ID
+
+<Note>**GET** `/api/v1/problems/{problem_id}`</Note>
+
+Returns a single problem including its parent joint and associated exercises.
+
+**Path parameters**
+
+<ParamField path="problem_id" type="integer" required>
+  The unique identifier of the problem.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/problems/1
+```
+</CodeGroup>
+
+```json Response 200
+{
+  "id": 1,
+  "name": "ACL Tear",
+  "description": "Rupture of the anterior cruciate ligament",
+  "symptoms": "Sudden pain, swelling, instability",
+  "joint_id": 1,
+  "created_at": "2026-01-12T10:00:00Z",
+  "updated_at": "2026-01-12T10:00:00Z",
+  "joint": {
+    "id": 1,
+    "name": "Knee",
+    "description": "Hinge joint connecting the femur and tibia",
+    "created_at": "2026-01-10T09:00:00Z",
+    "updated_at": "2026-01-10T09:00:00Z"
+  },
+  "exercises": []
+}
+```
+
+---
+
+## Get problems by joint
+
+<Note>**GET** `/api/v1/problems/joint/{joint_id}`</Note>
+
+Returns all problems that belong to the specified joint. Returns `404` if the joint does not exist.
+
+**Path parameters**
+
+<ParamField path="joint_id" type="integer" required>
+  The ID of the joint whose problems to retrieve.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/problems/joint/1
+```
+</CodeGroup>
+
+```json Response 200
+[
+  {
+    "id": 1,
+    "name": "ACL Tear",
+    "description": "Rupture of the anterior cruciate ligament",
+    "symptoms": "Sudden pain, swelling, instability",
+    "joint_id": 1,
+    "created_at": "2026-01-12T10:00:00Z",
+    "updated_at": "2026-01-12T10:00:00Z",
+    "joint": null,
+    "exercises": []
+  }
+]
+```
+
+---
+
+## Update problem
+
+<Note>**PUT** `/api/v1/problems/{problem_id}`</Note>
+
+Partially updates an existing problem. Only fields included in the request body are changed. If `joint_id` is provided, the new joint must exist.
+
+**Path parameters**
+
+<ParamField path="problem_id" type="integer" required>
+  The unique identifier of the problem to update.
+</ParamField>
+
+**Request body** — all fields are optional
+
+<ParamField body="name" type="string">
+  New name for the problem. Between 1 and 150 characters.
+</ParamField>
+
+<ParamField body="description" type="string">
+  New description.
+</ParamField>
+
+<ParamField body="symptoms" type="string">
+  New symptom description.
+</ParamField>
+
+<ParamField body="joint_id" type="integer">
+  Reassign the problem to a different joint. Must reference an existing joint.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X PUT http://localhost:8000/api/v1/problems/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symptoms": "Sudden pain, swelling, instability, popping sound"
+  }'
+```
+</CodeGroup>
+
+```json Response 200
+{
+  "id": 1,
+  "name": "ACL Tear",
+  "description": "Rupture of the anterior cruciate ligament",
+  "symptoms": "Sudden pain, swelling, instability, popping sound",
+  "joint_id": 1,
+  "created_at": "2026-01-12T10:00:00Z",
+  "updated_at": "2026-02-01T09:00:00Z",
+  "joint": null,
+  "exercises": []
+}
+```
+
+---
+
+## Delete problem
+
+<Note>**DELETE** `/api/v1/problems/{problem_id}`</Note>
+
+Permanently deletes a problem. Returns `404` if the problem does not exist.
+
+**Path parameters**
+
+<ParamField path="problem_id" type="integer" required>
+  The unique identifier of the problem to delete.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl -X DELETE http://localhost:8000/api/v1/problems/1
+```
+</CodeGroup>
+
+```json Response 200
+{
+  "message": "Problem deleted successfully"
+}
+```
+
+---
+
+## Search problems
+
+<Note>**GET** `/api/v1/problems/search/{search_term}`</Note>
+
+Returns all problems whose `name`, `description`, or `symptoms` contain the search term (case-insensitive).
+
+**Path parameters**
+
+<ParamField path="search_term" type="string" required>
+  The term to search for.
+</ParamField>
+
+<CodeGroup>
+```bash Request
+curl http://localhost:8000/api/v1/problems/search/acl
+```
+</CodeGroup>
+
+```json Response 200
+[
+  {
+    "id": 1,
+    "name": "ACL Tear",
+    "description": "Rupture of the anterior cruciate ligament",
+    "symptoms": "Sudden pain, swelling, instability",
+    "joint_id": 1,
+    "created_at": "2026-01-12T10:00:00Z",
+    "updated_at": "2026-01-12T10:00:00Z",
+    "joint": null,
+    "exercises": []
+  }
+]
+```

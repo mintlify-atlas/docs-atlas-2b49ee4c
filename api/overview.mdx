@@ -1,0 +1,206 @@
+---
+title: "API Overview"
+description: "Complete reference for the Digi Rehab REST API — base URLs, versioning, authentication, error codes, and resource index."
+---
+
+The Digi Rehab API is a RESTful service built on **FastAPI**. All request and response bodies use **JSON**. The API is versioned under the `/api/v1` prefix.
+
+## Base URL
+
+```
+http://localhost:8000
+```
+
+## Version prefix
+
+All resource endpoints are scoped under:
+
+```
+http://localhost:8000/api/v1
+```
+
+## Interactive documentation
+
+<Info>
+FastAPI automatically generates interactive API documentation while the server is running.
+
+- **Swagger UI** — [http://localhost:8000/docs](http://localhost:8000/docs)
+- **ReDoc** — [http://localhost:8000/redoc](http://localhost:8000/redoc)
+</Info>
+
+---
+
+## System endpoints
+
+### GET /
+
+Returns API metadata including the current version and links to documentation.
+
+```bash
+curl http://localhost:8000/
+```
+
+```json
+{
+  "message": "Welcome to Digi Rehab API",
+  "version": "1.0.0",
+  "description": "Exercise Prescription System for Rehabilitation",
+  "docs": "/docs",
+  "redoc": "/redoc",
+  "status": "operational"
+}
+```
+
+### GET /health
+
+Health check endpoint that verifies database connectivity. Returns `503` if the database is unreachable.
+
+```bash
+curl http://localhost:8000/health
+```
+
+```json
+{
+  "status": "healthy",
+  "database": "connected",
+  "timestamp": "2026-02-16T00:00:00Z"
+}
+```
+
+### GET /api/v1
+
+Returns version information and a map of all resource endpoint paths.
+
+```bash
+curl http://localhost:8000/api/v1
+```
+
+---
+
+## Pagination
+
+List endpoints support offset-based pagination via two query parameters:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `skip` | integer | `0` | Number of records to skip |
+| `limit` | integer | `100` | Maximum number of records to return |
+
+```bash
+curl "http://localhost:8000/api/v1/joints/?skip=0&limit=20"
+```
+
+---
+
+## Response format
+
+All responses are JSON. Successful responses return the resource object or an array of resource objects. Delete operations return a `MessageResponse` object:
+
+```json
+{ "message": "Resource deleted successfully" }
+```
+
+---
+
+## HTTP status codes
+
+| Code | Meaning |
+|------|---------|
+| `200 OK` | Request succeeded. |
+| `201 Created` | Resource created successfully (POST endpoints). |
+| `400 Bad Request` | Invalid input — e.g. duplicate name, referenced foreign key does not exist, or attempt to delete a non-custom category. |
+| `404 Not Found` | The requested resource does not exist. |
+| `422 Unprocessable Entity` | Request body failed schema validation (FastAPI/Pydantic). |
+| `503 Service Unavailable` | Database is unreachable (health check only). |
+
+Error bodies follow this shape:
+
+```json
+{ "detail": "Human-readable error message" }
+```
+
+---
+
+## All endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | API info |
+| `GET` | `/health` | Health check |
+| `GET` | `/api/v1` | Version info |
+| `GET` | `/api/v1/joints/` | List joints |
+| `POST` | `/api/v1/joints/` | Create joint |
+| `GET` | `/api/v1/joints/{joint_id}` | Get joint by ID |
+| `PUT` | `/api/v1/joints/{joint_id}` | Update joint |
+| `DELETE` | `/api/v1/joints/{joint_id}` | Delete joint |
+| `GET` | `/api/v1/joints/search/{search_term}` | Search joints |
+| `GET` | `/api/v1/problems/` | List problems |
+| `POST` | `/api/v1/problems/` | Create problem |
+| `GET` | `/api/v1/problems/{problem_id}` | Get problem by ID |
+| `GET` | `/api/v1/problems/joint/{joint_id}` | Problems for a joint |
+| `PUT` | `/api/v1/problems/{problem_id}` | Update problem |
+| `DELETE` | `/api/v1/problems/{problem_id}` | Delete problem |
+| `GET` | `/api/v1/problems/search/{search_term}` | Search problems |
+| `GET` | `/api/v1/exercises/` | List exercises |
+| `POST` | `/api/v1/exercises/` | Create exercise |
+| `GET` | `/api/v1/exercises/predefined` | List predefined exercises |
+| `GET` | `/api/v1/exercises/{exercise_id}` | Get exercise by ID |
+| `GET` | `/api/v1/exercises/problem/{problem_id}` | Exercises for a problem |
+| `PUT` | `/api/v1/exercises/{exercise_id}` | Update exercise |
+| `DELETE` | `/api/v1/exercises/{exercise_id}` | Delete exercise |
+| `POST` | `/api/v1/exercises/{exercise_id}/problems/{problem_id}` | Add problem to exercise |
+| `DELETE` | `/api/v1/exercises/{exercise_id}/problems/{problem_id}` | Remove problem from exercise |
+| `GET` | `/api/v1/exercises/search/{search_term}` | Search exercises |
+| `GET` | `/api/v1/categories/body-areas` | List body areas |
+| `POST` | `/api/v1/categories/body-areas` | Create body area |
+| `PUT` | `/api/v1/categories/body-areas/{category_id}` | Update body area |
+| `DELETE` | `/api/v1/categories/body-areas/{category_id}` | Delete body area |
+| `GET` | `/api/v1/categories/exercise-types` | List exercise types |
+| `POST` | `/api/v1/categories/exercise-types` | Create exercise type |
+| `PUT` | `/api/v1/categories/exercise-types/{category_id}` | Update exercise type |
+| `DELETE` | `/api/v1/categories/exercise-types/{category_id}` | Delete exercise type |
+| `GET` | `/api/v1/categories/positions` | List positions |
+| `POST` | `/api/v1/categories/positions` | Create position |
+| `PUT` | `/api/v1/categories/positions/{category_id}` | Update position |
+| `DELETE` | `/api/v1/categories/positions/{category_id}` | Delete position |
+| `GET` | `/api/v1/categories/movements` | List movements |
+| `POST` | `/api/v1/categories/movements` | Create movement |
+| `PUT` | `/api/v1/categories/movements/{category_id}` | Update movement |
+| `DELETE` | `/api/v1/categories/movements/{category_id}` | Delete movement |
+| `GET` | `/api/v1/categories/equipment-types` | List equipment types |
+| `POST` | `/api/v1/categories/equipment-types` | Create equipment type |
+| `PUT` | `/api/v1/categories/equipment-types/{category_id}` | Update equipment type |
+| `DELETE` | `/api/v1/categories/equipment-types/{category_id}` | Delete equipment type |
+| `GET` | `/api/v1/prescriptions/` | List prescriptions |
+| `POST` | `/api/v1/prescriptions/` | Create prescription |
+| `GET` | `/api/v1/prescriptions/{prescription_id}` | Get prescription by ID |
+| `GET` | `/api/v1/prescriptions/patient/{patient_name}` | Prescriptions for a patient |
+| `GET` | `/api/v1/prescriptions/provider/{provider_name}` | Prescriptions by provider |
+| `PUT` | `/api/v1/prescriptions/{prescription_id}` | Update prescription |
+| `DELETE` | `/api/v1/prescriptions/{prescription_id}` | Delete prescription |
+| `PATCH` | `/api/v1/prescriptions/{prescription_id}/status` | Update prescription status |
+| `POST` | `/api/v1/prescriptions/{prescription_id}/exercises` | Add exercise to prescription |
+| `DELETE` | `/api/v1/prescriptions/{prescription_id}/exercises/{exercise_id}` | Remove exercise from prescription |
+| `GET` | `/api/v1/prescriptions/search/{search_term}` | Search prescriptions |
+
+---
+
+## Resource sections
+
+<CardGroup cols={2}>
+  <Card title="Joints" icon="bone" href="/api/joints">
+    Manage body joints that act as the root anchor for clinical problems.
+  </Card>
+  <Card title="Problems" icon="triangle-exclamation" href="/api/problems">
+    Track conditions and diagnoses associated with specific joints.
+  </Card>
+  <Card title="Exercises" icon="dumbbell" href="/api/exercises">
+    A library of therapeutic exercises with rich categorisation and media links.
+  </Card>
+  <Card title="Categories" icon="tags" href="/api/categories">
+    Body areas, exercise types, positions, movements, and equipment types.
+  </Card>
+  <Card title="Prescriptions" icon="file-medical" href="/api/prescriptions">
+    Create and manage exercise prescriptions assigned to patients.
+  </Card>
+</CardGroup>

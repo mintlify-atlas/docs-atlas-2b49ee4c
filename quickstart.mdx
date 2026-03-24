@@ -1,80 +1,226 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get Digi Rehab running locally and issue your first patient prescription in under ten minutes."
 ---
 
-## Get started in three steps
+## Prerequisites
 
-Get your documentation site running locally and make your first customization.
+- Python 3.10+
+- Node.js 18+ and npm
+- Git
 
-### Step 1: Set up your local environment
+## Start the backend
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/your-org/digi-rehab.git
+    cd digi-rehab
+    ```
+  </Step>
 
-### Step 2: Deploy your changes
+  <Step title="Install Python dependencies">
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    Key packages installed:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    | Package | Version | Purpose |
+    |---|---|---|
+    | `fastapi` | ≥0.100 | Web framework |
+    | `uvicorn[standard]` | ≥0.23 | ASGI server |
+    | `sqlalchemy` | ≥2.0 | ORM and connection pooling |
+    | `pydantic` | ≥2.0 | Request/response validation |
+    | `python-dotenv` | ≥1.0 | `.env` file loading |
+  </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Create your .env file">
+    Copy the example and edit as needed:
 
-### Step 3: Go live
+    ```bash
+    cp .env.example .env
+    ```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    The default `.env` uses SQLite — no extra setup required:
 
-## Next steps
+    ```bash
+    DATABASE_URL=sqlite:///./digi_rehab.db
+    DEBUG=True
+    LOG_LEVEL=info
+    HOST=0.0.0.0
+    PORT=8000
+    ```
 
-Now that you have your docs running, explore these key features:
+    <Note>
+      SQLite is fine for development and evaluation. For production, set `DATABASE_URL` to a PostgreSQL or MySQL connection string. See [Configuration](/configuration) for details.
+    </Note>
+  </Step>
 
-<CardGroup cols={2}>
+  <Step title="Initialize the database">
+    This creates all tables and seeds the exercise category taxonomy plus a library of 20 predefined exercises:
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+    ```bash
+    python init_database.py
+    ```
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+    You should see output confirming body areas, exercise types, positions, movements, equipment types, and predefined exercises were added.
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+    <Note>
+      The API server also calls `create_tables()` on startup via its lifespan handler, so manual seeding is optional if you do not need the predefined exercise library.
+    </Note>
+  </Step>
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+  <Step title="Start the API server">
+    <CodeGroup>
 
-</CardGroup>
+    ```bash Using python main.py
+    python main.py
+    ```
+
+    ```bash Using uvicorn directly
+    uvicorn main:app --reload --host 0.0.0.0 --port 8000
+    ```
+
+    </CodeGroup>
+
+    The API is now available at `http://localhost:8000`. Interactive Swagger docs are at `http://localhost:8000/docs` and ReDoc at `http://localhost:8000/redoc`.
+  </Step>
+</Steps>
+
+## Start the frontend
+
+<Steps>
+  <Step title="Install frontend dependencies">
+    ```bash
+    cd frontend
+    npm install
+    ```
+  </Step>
+
+  <Step title="Start the development server">
+    ```bash
+    npm run dev
+    ```
+
+    The React dashboard is now available at `http://localhost:5173`.
+  </Step>
+</Steps>
+
+## Issue your first prescription via the API
+
+With the server running, work through these four API calls in order. Each response returns an `id` field you pass to the next request.
+
+<Steps>
+  <Step title="Create a joint">
+    <CodeGroup>
+
+    ```bash curl
+    curl -X POST http://localhost:8000/api/v1/joints/ \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Knee",
+        "description": "Knee joint - largest joint in the body"
+      }'
+    ```
+
+    </CodeGroup>
+
+    The response includes the new joint's `id` (e.g. `1`).
+  </Step>
+
+  <Step title="Create a problem on that joint">
+    Use the `joint_id` returned in the previous step:
+
+    <CodeGroup>
+
+    ```bash curl
+    curl -X POST http://localhost:8000/api/v1/problems/ \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Knee Pain",
+        "description": "General knee pain and discomfort",
+        "symptoms": "Pain when walking, stiffness after sitting",
+        "joint_id": 1
+      }'
+    ```
+
+    </CodeGroup>
+
+    The response includes the new problem's `id` (e.g. `1`).
+  </Step>
+
+  <Step title="Add an exercise linked to the problem">
+    Use the `problem_ids` array to associate this exercise with the problem you just created:
+
+    <CodeGroup>
+
+    ```bash curl
+    curl -X POST http://localhost:8000/api/v1/exercises/ \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Knee Extension",
+        "description": "Strengthen quadriceps muscles",
+        "instructions": "Sit in chair, extend leg straight, hold for 5 seconds",
+        "duration_minutes": 10,
+        "repetitions": 15,
+        "sets": 3,
+        "difficulty_level": "beginner",
+        "image_url": "https://example.com/knee-extension.jpg",
+        "problem_ids": [1]
+      }'
+    ```
+
+    </CodeGroup>
+
+    The response includes the new exercise's `id` (e.g. `1`).
+  </Step>
+
+  <Step title="Create a prescription">
+    Bundle the exercise into a patient prescription with optional per-prescription overrides:
+
+    <CodeGroup>
+
+    ```bash curl
+    curl -X POST http://localhost:8000/api/v1/prescriptions/ \
+      -H "Content-Type: application/json" \
+      -d '{
+        "patient_name": "John Doe",
+        "patient_email": "john@example.com",
+        "provider_name": "Dr. Smith",
+        "notes": "Patient recovering from knee surgery",
+        "exercises": [
+          {
+            "exercise_id": 1,
+            "custom_instructions": "Start with 10 reps, increase gradually",
+            "custom_repetitions": 10,
+            "custom_sets": 2
+          }
+        ]
+      }'
+    ```
+
+    </CodeGroup>
+
+    A successful response returns the full prescription document, including the `PrescriptionExercise` entries with your custom parameters.
+  </Step>
+</Steps>
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  All endpoints follow the pattern `/api/v1/{resource}/`. The full endpoint reference — including `GET`, `PUT`, and `DELETE` operations — is available at `/api/v1` info endpoint or in the Swagger UI at `http://localhost:8000/docs`.
 </Note>
+
+## Verify the health endpoint
+
+```bash
+curl http://localhost:8000/health
+```
+
+A healthy instance returns:
+
+```json
+{
+  "status": "healthy",
+  "database": "connected"
+}
+```

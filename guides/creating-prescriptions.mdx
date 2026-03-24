@@ -1,0 +1,269 @@
+---
+title: "Creating Prescriptions"
+description: "End-to-end guide for creating, managing, and tracking patient exercise prescriptions."
+---
+
+A prescription ties a set of exercises to a specific patient and provider. Each exercise entry in the prescription can override the exercise's default repetitions, sets, duration, and instructions, letting clinicians tailor the library to individual patient needs.
+
+## Prescription fields
+
+**Top-level**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `patient_name` | string | Yes | 1–100 characters |
+| `patient_email` | string | No | Must be a valid email address |
+| `provider_name` | string | Yes | 1–100 characters |
+| `notes` | string | No | Clinical notes |
+| `status` | string | No | `active` (default), `completed`, or `cancelled` |
+| `exercises` | array | No | List of `PrescriptionExercise` objects |
+
+**Per-exercise override fields**
+
+| Field | Type | Notes |
+|---|---|---|
+| `exercise_id` | integer | Must reference an existing exercise |
+| `custom_repetitions` | integer | Overrides the exercise's default `repetitions` |
+| `custom_sets` | integer | Overrides the exercise's default `sets` |
+| `custom_duration` | integer | Overrides the exercise's default `duration_minutes` |
+| `custom_instructions` | string | Overrides the exercise's default `instructions` |
+
+<Warning>
+  Valid status values are `active`, `completed`, and `cancelled`. There is no enforced state machine — any transition is accepted — but consider your clinical workflow before moving a prescription to `cancelled` or `completed`, as this is not automatically reversible from the UI.
+</Warning>
+
+---
+
+## Endpoints
+
+### Create a prescription
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/prescriptions/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "patient_name": "Sarah Mitchell",
+    "patient_email": "s.mitchell@example.com",
+    "provider_name": "Dr. James Okafor",
+    "notes": "Post-operative ACL rehab — phase 1. Low impact only.",
+    "status": "active",
+    "exercises": [
+      {
+        "exercise_id": 5,
+        "custom_repetitions": 5,
+        "custom_sets": 2,
+        "custom_instructions": "Perform slowly and stop if pain exceeds 3/10."
+      },
+      {
+        "exercise_id": 8,
+        "custom_duration": 1
+      }
+    ]
+  }'
+```
+
+**Response** — `201 Created`
+
+```json
+{
+  "id": 12,
+  "patient_name": "Sarah Mitchell",
+  "patient_email": "s.mitchell@example.com",
+  "provider_name": "Dr. James Okafor",
+  "notes": "Post-operative ACL rehab — phase 1. Low impact only.",
+  "status": "active",
+  "created_at": "2024-01-15T08:30:00",
+  "updated_at": "2024-01-15T08:30:00",
+  "prescription_exercises": [
+    {
+      "id": 21,
+      "prescription_id": 12,
+      "exercise_id": 5,
+      "custom_repetitions": 5,
+      "custom_sets": 2,
+      "custom_duration": null,
+      "custom_instructions": "Perform slowly and stop if pain exceeds 3/10.",
+      "created_at": "2024-01-15T08:30:00",
+      "exercise": { "id": 5, "name": "Hamstring Stretch", ... }
+    },
+    {
+      "id": 22,
+      "prescription_id": 12,
+      "exercise_id": 8,
+      "custom_repetitions": null,
+      "custom_sets": null,
+      "custom_duration": 1,
+      "custom_instructions": null,
+      "created_at": "2024-01-15T08:30:00",
+      "exercise": { "id": 8, "name": "Quad Set", ... }
+    }
+  ]
+}
+```
+
+### List prescriptions
+
+<CodeGroup>
+
+```bash All prescriptions
+curl "http://localhost:8000/api/v1/prescriptions/?skip=0&limit=50"
+```
+
+```bash Filter by status
+curl "http://localhost:8000/api/v1/prescriptions/?status_filter=active"
+```
+
+</CodeGroup>
+
+### Get a prescription by ID
+
+```bash
+curl "http://localhost:8000/api/v1/prescriptions/12"
+```
+
+Returns the full prescription including all `prescription_exercises` with nested exercise objects.
+
+### Look up by patient name
+
+```bash
+curl "http://localhost:8000/api/v1/prescriptions/patient/Sarah%20Mitchell"
+```
+
+Returns all prescriptions matching the given patient name. The match is performed in the data layer — URL-encode any spaces or special characters.
+
+### Look up by provider name
+
+```bash
+curl "http://localhost:8000/api/v1/prescriptions/provider/Dr.%20James%20Okafor"
+```
+
+### Update a prescription
+
+Supply only the fields you want to change. The `exercises` list is not updated here — use the per-exercise endpoints below for that.
+
+```bash
+curl -X PUT "http://localhost:8000/api/v1/prescriptions/12" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notes": "Phase 1 complete — progressed to phase 2.",
+    "status": "completed"
+  }'
+```
+
+### Update prescription status only
+
+Use the dedicated status endpoint for quick status changes without a full update payload.
+
+```bash
+curl -X PATCH "http://localhost:8000/api/v1/prescriptions/12/status?status=completed"
+```
+
+Accepted values: `active`, `completed`, `cancelled`.
+
+### Add an exercise to an existing prescription
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/prescriptions/12/exercises" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "exercise_id": 11,
+    "custom_sets": 3,
+    "custom_repetitions": 15
+  }'
+```
+
+### Remove an exercise from a prescription
+
+```bash
+curl -X DELETE "http://localhost:8000/api/v1/prescriptions/12/exercises/11"
+```
+
+```json
+{ "message": "Exercise removed from prescription successfully" }
+```
+
+### Delete a prescription
+
+```bash
+curl -X DELETE "http://localhost:8000/api/v1/prescriptions/12"
+```
+
+```json
+{ "message": "Prescription deleted successfully" }
+```
+
+### Search prescriptions
+
+Searches across patient name, provider name, and notes.
+
+```bash
+curl "http://localhost:8000/api/v1/prescriptions/search/ACL"
+```
+
+---
+
+## Complete workflow: prescribe exercises for a patient
+
+<Steps>
+  <Step title="Ensure joints, problems, and exercises exist">
+    Prescriptions reference exercises by ID. Before creating a prescription, verify the exercises you intend to use are already in the system.
+
+    ```bash
+    # List available exercises
+    curl "http://localhost:8000/api/v1/exercises/?skip=0&limit=100"
+    ```
+
+    If exercises are missing, follow the [Managing Exercises](/guides/managing-exercises) guide first.
+  </Step>
+
+  <Step title="Create the prescription with exercises">
+    Include the exercises array in the create request. Any `custom_*` fields override the exercise library defaults for this patient only.
+
+    ```bash
+    curl -X POST "http://localhost:8000/api/v1/prescriptions/" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "patient_name": "Sarah Mitchell",
+        "patient_email": "s.mitchell@example.com",
+        "provider_name": "Dr. James Okafor",
+        "notes": "Post-operative ACL rehab — phase 1. Low impact only.",
+        "status": "active",
+        "exercises": [
+          {
+            "exercise_id": 5,
+            "custom_repetitions": 5,
+            "custom_sets": 2,
+            "custom_instructions": "Perform slowly and stop if pain exceeds 3/10."
+          }
+        ]
+      }'
+    ```
+
+    Note the returned `id` (e.g. `12`) for subsequent steps.
+  </Step>
+
+  <Step title="View the prescription">
+    ```bash
+    curl "http://localhost:8000/api/v1/prescriptions/12"
+    ```
+
+    Confirm all exercises appear and that custom overrides are reflected correctly.
+  </Step>
+
+  <Step title="Update prescription status when complete">
+    When the patient finishes their rehabilitation program, mark the prescription as completed.
+
+    ```bash
+    curl -X PATCH \
+      "http://localhost:8000/api/v1/prescriptions/12/status?status=completed"
+    ```
+  </Step>
+
+  <Step title="Look up all prescriptions for the patient">
+    ```bash
+    curl "http://localhost:8000/api/v1/prescriptions/patient/Sarah%20Mitchell"
+    ```
+
+    Returns all prescriptions (active, completed, and cancelled) for that patient name.
+  </Step>
+</Steps>

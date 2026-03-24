@@ -1,0 +1,247 @@
+---
+title: "Custom Categories"
+description: "Extend the built-in exercise taxonomy by adding your own body areas, exercise types, positions, movements, and equipment types."
+---
+
+Digi Rehab ships with a comprehensive set of default categories for classifying exercises. When the defaults do not cover a specific clinical need, you can add **custom categories** that behave identically to built-in ones.
+
+## Default vs. custom categories
+
+Every category record has an `is_custom` flag.
+
+| `is_custom` | Source | Can be deleted? |
+|---|---|---|
+| `false` | Shipped with the system | No |
+| `true` | Created via the API | Yes |
+
+<Note>
+  Custom categories are persisted to the database just like default ones. They survive application restarts and are immediately available across all exercise forms once created.
+</Note>
+
+---
+
+## Default category values
+
+<Tabs>
+  <Tab title="Body Areas">
+    Face/TMJ, Cervical, Thoracic, Lumbar, Abdominal, Sacroiliac, Hip, Knee, Ankle/Foot, Shoulder, Elbow/Wrist, Hand, All Body
+  </Tab>
+  <Tab title="Exercise Types">
+    Stretch, PROM, AAROM, Mobilization, AROM, Static, Isometrics, Stabilization, Resisted, Gym, Plyometrics, Cardio, Dynamic
+  </Tab>
+  <Tab title="Positions">
+    Standing, Sitting, Kneeling, Sidelying, Supine, Prone
+  </Tab>
+  <Tab title="Movements">
+    Flexion, Extension, Rotation, Abduction, Adduction, Side Bend, Diagonal, Horz. Abd., Horz. Add., Supination, Pronation, Ulnar Dev., Radial Dev.
+  </Tab>
+  <Tab title="Equipment Types">
+    Elastic, Weight, Pulley, Ball, BOSU, Total Gym, TRX, Foam Roll, Balance Board, Cane, Closed Chain, No Device, Putty, Other
+  </Tab>
+</Tabs>
+
+---
+
+## Managing categories
+
+### List all categories
+
+Fetch all records (default and custom) for any category type.
+
+<CodeGroup>
+
+```bash Body areas
+curl "http://localhost:8000/api/v1/categories/body-areas"
+```
+
+```bash Exercise types
+curl "http://localhost:8000/api/v1/categories/exercise-types"
+```
+
+```bash Positions
+curl "http://localhost:8000/api/v1/categories/positions"
+```
+
+```bash Movements
+curl "http://localhost:8000/api/v1/categories/movements"
+```
+
+```bash Equipment types
+curl "http://localhost:8000/api/v1/categories/equipment-types"
+```
+
+</CodeGroup>
+
+Each response is an array of category objects:
+
+```json
+[
+  { "id": 1, "name": "Stretch", "is_custom": false, "created_at": "2024-01-01T00:00:00" },
+  { "id": 14, "name": "Aquatic", "is_custom": true,  "created_at": "2024-01-12T11:20:00" }
+]
+```
+
+### Create a custom category
+
+All five category types accept the same `{ "name": "..." }` request body. New categories are always created with `is_custom: true`.
+
+<CodeGroup>
+
+```bash Body area
+curl -X POST "http://localhost:8000/api/v1/categories/body-areas" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Temporomandibular Joint"}'
+```
+
+```bash Exercise type
+curl -X POST "http://localhost:8000/api/v1/categories/exercise-types" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Aquatic"}'
+```
+
+```bash Position
+curl -X POST "http://localhost:8000/api/v1/categories/positions" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Quadruped"}'
+```
+
+```bash Movement
+curl -X POST "http://localhost:8000/api/v1/categories/movements" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Circumduction"}'
+```
+
+```bash Equipment type
+curl -X POST "http://localhost:8000/api/v1/categories/equipment-types" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Slider Disc"}'
+```
+
+</CodeGroup>
+
+**Response** — `201 Created`
+
+```json
+{
+  "id": 15,
+  "name": "Aquatic",
+  "is_custom": true,
+  "created_at": "2024-01-12T11:20:00"
+}
+```
+
+### Update a custom category
+
+You can rename any category — default or custom — by supplying its ID.
+
+<CodeGroup>
+
+```bash Body area
+curl -X PUT "http://localhost:8000/api/v1/categories/body-areas/15" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "TMJ (Temporomandibular)"}'
+```
+
+```bash Exercise type
+curl -X PUT "http://localhost:8000/api/v1/categories/exercise-types/14" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Aquatic Therapy"}'
+```
+
+</CodeGroup>
+
+### Delete a custom category
+
+<Warning>
+  Only categories with `is_custom: true` can be deleted. Attempting to delete a default category (`is_custom: false`) returns `400 Bad Request` with the message `"Cannot delete default category or category not found"`.
+</Warning>
+
+<CodeGroup>
+
+```bash Body area
+curl -X DELETE "http://localhost:8000/api/v1/categories/body-areas/15"
+```
+
+```bash Exercise type
+curl -X DELETE "http://localhost:8000/api/v1/categories/exercise-types/14"
+```
+
+```bash Position
+curl -X DELETE "http://localhost:8000/api/v1/categories/positions/7"
+```
+
+```bash Movement
+curl -X DELETE "http://localhost:8000/api/v1/categories/movements/14"
+```
+
+```bash Equipment type
+curl -X DELETE "http://localhost:8000/api/v1/categories/equipment-types/15"
+```
+
+</CodeGroup>
+
+```json
+{ "message": "Body area deleted successfully" }
+```
+
+---
+
+## Using custom categories when creating exercises
+
+Once you have the ID of a custom category, pass it in the same `*_ids` arrays as any default category.
+
+```bash
+# 1. Create a custom exercise type
+curl -X POST "http://localhost:8000/api/v1/categories/exercise-types" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Aquatic"}'
+# → { "id": 14, "name": "Aquatic", "is_custom": true, ... }
+
+# 2. Create a custom position
+curl -X POST "http://localhost:8000/api/v1/categories/positions" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Quadruped"}'
+# → { "id": 7, "name": "Quadruped", "is_custom": true, ... }
+
+# 3. Create an exercise referencing both custom category IDs
+curl -X POST "http://localhost:8000/api/v1/exercises/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Aquatic Knee Flexion",
+    "instructions": "In chest-deep water, perform slow knee flexion and extension cycles.",
+    "difficulty_level": "beginner",
+    "exercise_type_ids": [14],
+    "position_ids": [7]
+  }'
+```
+
+---
+
+## Python example
+
+The following script creates a custom body area and immediately uses it in a new exercise.
+
+```python
+import requests
+
+BASE = "http://localhost:8000/api/v1"
+
+# Create a custom body area
+custom_area = {"name": "Temporomandibular Joint"}
+response = requests.post(f"{BASE}/categories/body-areas", json=custom_area)
+new_area = response.json()
+print(f"Created category with ID: {new_area['id']}, is_custom: {new_area['is_custom']}")
+# → Created category with ID: 14, is_custom: True
+
+# Use the new custom category in an exercise
+exercise_data = {
+    "name": "TMJ Lateral Glide",
+    "instructions": "Rest chin in hand and apply gentle lateral pressure. Hold 5 seconds.",
+    "difficulty_level": "beginner",
+    "repetitions": 10,
+    "sets": 2,
+    "body_area_ids": [new_area["id"]],
+}
+exercise = requests.post(f"{BASE}/exercises/", json=exercise_data).json()
+print(f"Created exercise: {exercise['name']} (ID: {exercise['id']})")
+```

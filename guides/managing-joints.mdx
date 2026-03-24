@@ -1,0 +1,238 @@
+---
+title: "Managing Joints and Problems"
+description: "Create and organize anatomical joints and their associated clinical problems in Digi Rehab."
+---
+
+Joints form the top of the clinical hierarchy in Digi Rehab. Each joint can have one or more **problems** attached to it, and each problem can be linked to targeted exercises. This guide walks through the complete CRUD workflow for both resources.
+
+## Joints
+
+### List all joints
+
+Returns a paginated list of joints. Use `skip` and `limit` to page through large datasets.
+
+```bash
+curl "http://localhost:8000/api/v1/joints/?skip=0&limit=20"
+```
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Knee",
+    "description": "The knee joint connecting the femur and tibia.",
+    "created_at": "2024-01-10T09:00:00",
+    "updated_at": "2024-01-10T09:00:00",
+    "problems": []
+  }
+]
+```
+
+### Create a joint
+
+Joint names must be **unique** — a `400 Bad Request` is returned if a joint with the same name already exists.
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/joints/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Knee",
+    "description": "The knee joint connecting the femur and tibia."
+  }'
+```
+
+**Request body**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | Yes | 1–100 characters, must be unique |
+| `description` | string | No | Free-text description |
+
+**Response** — `201 Created`
+
+```json
+{
+  "id": 1,
+  "name": "Knee",
+  "description": "The knee joint connecting the femur and tibia.",
+  "created_at": "2024-01-10T09:00:00",
+  "updated_at": "2024-01-10T09:00:00",
+  "problems": []
+}
+```
+
+### Get a joint by ID
+
+```bash
+curl "http://localhost:8000/api/v1/joints/1"
+```
+
+Returns the joint object including its nested `problems` array. Returns `404 Not Found` if the ID does not exist.
+
+### Update a joint
+
+All fields in the update body are optional — only supplied fields are changed.
+
+```bash
+curl -X PUT "http://localhost:8000/api/v1/joints/1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Hinge joint between femur, tibia, and patella."
+  }'
+```
+
+### Delete a joint
+
+```bash
+curl -X DELETE "http://localhost:8000/api/v1/joints/1"
+```
+
+**Response** — `200 OK`
+
+```json
+{ "message": "Joint deleted successfully" }
+```
+
+### Search joints
+
+Searches by name **or** description (case-insensitive, partial match).
+
+```bash
+curl "http://localhost:8000/api/v1/joints/search/knee"
+```
+
+---
+
+## Problems
+
+Problems represent specific clinical conditions associated with a joint (e.g. "ACL Tear" under the Knee joint).
+
+### List all problems
+
+```bash
+curl "http://localhost:8000/api/v1/problems/?skip=0&limit=50"
+```
+
+### Create a problem
+
+The `joint_id` must reference an existing joint or the request returns `400 Bad Request`.
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/problems/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Patellofemoral Pain Syndrome",
+    "description": "Pain originating from the patellofemoral joint.",
+    "symptoms": "Anterior knee pain, worsened by stairs, squatting, or prolonged sitting.",
+    "joint_id": 1
+  }'
+```
+
+**Request body**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | Yes | 1–150 characters |
+| `description` | string | No | Clinical description |
+| `symptoms` | string | No | Presenting symptoms |
+| `joint_id` | integer | Yes | Must reference an existing joint |
+
+**Response** — `201 Created`
+
+```json
+{
+  "id": 3,
+  "name": "Patellofemoral Pain Syndrome",
+  "description": "Pain originating from the patellofemoral joint.",
+  "symptoms": "Anterior knee pain, worsened by stairs, squatting, or prolonged sitting.",
+  "joint_id": 1,
+  "created_at": "2024-01-10T09:15:00",
+  "updated_at": "2024-01-10T09:15:00",
+  "joint": { "id": 1, "name": "Knee", "description": "...", "problems": [] },
+  "exercises": []
+}
+```
+
+### Get problems for a joint
+
+```bash
+curl "http://localhost:8000/api/v1/problems/joint/1"
+```
+
+Returns all problems associated with joint `1`. Returns `404 Not Found` if the joint does not exist.
+
+### Update a problem
+
+All fields are optional. If `joint_id` is changed, the new joint must exist.
+
+```bash
+curl -X PUT "http://localhost:8000/api/v1/problems/3" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symptoms": "Anterior knee pain, crepitus, tenderness on palpation."
+  }'
+```
+
+### Delete a problem
+
+```bash
+curl -X DELETE "http://localhost:8000/api/v1/problems/3"
+```
+
+```json
+{ "message": "Problem deleted successfully" }
+```
+
+### Search problems
+
+Searches by name, description, or symptoms (case-insensitive, partial match).
+
+```bash
+curl "http://localhost:8000/api/v1/problems/search/patella"
+```
+
+---
+
+## Complete workflow: create a knee joint and add a problem
+
+<Steps>
+  <Step title="Create the Knee joint">
+    ```bash
+    curl -X POST "http://localhost:8000/api/v1/joints/" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Knee",
+        "description": "Hinge joint between femur, tibia, and patella."
+      }'
+    ```
+
+    Note the returned `id` — you will need it in the next step.
+
+    ```json
+    { "id": 1, "name": "Knee", ... }
+    ```
+  </Step>
+
+  <Step title="Add a problem to the Knee">
+    Use the joint `id` from the previous step as `joint_id`.
+
+    ```bash
+    curl -X POST "http://localhost:8000/api/v1/problems/" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "ACL Sprain",
+        "description": "Partial or complete tear of the anterior cruciate ligament.",
+        "symptoms": "Acute pain, swelling, instability, and reduced range of motion.",
+        "joint_id": 1
+      }'
+    ```
+  </Step>
+
+  <Step title="Verify the joint now shows the problem">
+    ```bash
+    curl "http://localhost:8000/api/v1/joints/1"
+    ```
+
+    The `problems` array in the response will include the newly created problem.
+  </Step>
+</Steps>
