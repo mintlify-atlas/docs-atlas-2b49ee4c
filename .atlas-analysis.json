@@ -1,0 +1,115 @@
+{
+  "projectType": "saas",
+  "projectName": "Digi Rehab",
+  "projectDescription": "A full-stack exercise prescription system for rehabilitation providers to manage joints, problems, exercises, and patient prescriptions.",
+  "theme": "linden",
+  "primaryColor": "#7c7c80",
+  "lightColor": "#151c28",
+  "darkColor": "#f2f2f2",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart", "configuration"]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/data-model",
+              "concepts/exercise-categories",
+              "concepts/prescriptions"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/managing-joints",
+              "guides/managing-exercises",
+              "guides/creating-prescriptions",
+              "guides/custom-categories"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/installation",
+              "deployment/database-setup",
+              "deployment/environment-variables"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["api/overview"]
+          },
+          {
+            "group": "Joints",
+            "pages": ["api/joints"]
+          },
+          {
+            "group": "Problems",
+            "pages": ["api/problems"]
+          },
+          {
+            "group": "Exercises",
+            "pages": ["api/exercises"]
+          },
+          {
+            "group": "Categories",
+            "pages": ["api/categories"]
+          },
+          {
+            "group": "Prescriptions",
+            "pages": ["api/prescriptions"]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Joint and problem management for tracking body areas and associated conditions",
+    "Exercise library with images, videos, difficulty levels, and detailed instructions",
+    "Multi-dimensional exercise categorization (body area, type, position, movement, equipment)",
+    "Patient prescription system with customizable exercise parameters per patient",
+    "React-based dashboard frontend with real-time data via TanStack Query",
+    "SQLite/PostgreSQL/MySQL database support via SQLAlchemy",
+    "Custom category creation for extending default classification taxonomies",
+    "Swagger UI and ReDoc auto-generated API documentation"
+  ],
+  "publicApiSurface": [
+    "GET /api/v1/joints/",
+    "POST /api/v1/joints/",
+    "GET /api/v1/joints/{joint_id}",
+    "PUT /api/v1/joints/{joint_id}",
+    "DELETE /api/v1/joints/{joint_id}",
+    "GET /api/v1/problems/",
+    "POST /api/v1/problems/",
+    "GET /api/v1/problems/{problem_id}",
+    "GET /api/v1/problems/joint/{joint_id}",
+    "GET /api/v1/exercises/",
+    "POST /api/v1/exercises/",
+    "GET /api/v1/exercises/{exercise_id}",
+    "GET /api/v1/exercises/problem/{problem_id}",
+    "PUT /api/v1/exercises/{exercise_id}",
+    "DELETE /api/v1/exercises/{exercise_id}",
+    "GET /api/v1/categories/body-areas",
+    "POST /api/v1/categories/body-areas",
+    "GET /api/v1/categories/exercise-types",
+    "GET /api/v1/categories/positions",
+    "GET /api/v1/categories/movements",
+    "GET /api/v1/categories/equipment-types",
+    "GET /api/v1/prescriptions/",
+    "POST /api/v1/prescriptions/",
+    "GET /api/v1/prescriptions/{prescription_id}",
+    "GET /api/v1/prescriptions/patient/{name}",
+    "PUT /api/v1/prescriptions/{prescription_id}",
+    "DELETE /api/v1/prescriptions/{prescription_id}"
+  ]
+}
